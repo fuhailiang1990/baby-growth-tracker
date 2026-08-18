@@ -1,0 +1,90 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      - name: Create Cordova project
+        run: |
+          mkdir -p build
+          cd build
+          cordova create babytracker com.fuhailiang.babytracker "宝宝成长记"
+          cd babytracker
+          cordova platform add android
+
+      - name: Configure Cordova project
+        run: |
+          cd build/babytracker
+          cat > config.xml <<'EOF'
+          <?xml version='1.0' encoding='utf-8'?>
+          <widget id="com.fuhailiang.babytracker" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+              <name>宝宝成长记</name>
+              <description>记录宝宝每日喂养、生长、里程碑与养育建议</description>
+              <author email="baby@example.com" href="https://fuhailiang1990.github.io">Baby Tracker</author>
+              <content src="https://fuhailiang1990.github.io/baby-growth-tracker/" />
+              <allow-intent href="http://*/*" />
+              <allow-intent href="https://*/*" />
+              <allow-navigation href="https://fuhailiang1990.github.io/baby-growth-tracker/*" />
+              <access origin="*" />
+              <preference name="AndroidXEnabled" value="true" />
+              <preference name="Scheme" value="https" />
+              <preference name="MixedContentMode" value="2" />
+              <icon src="www/icon-512.png" />
+              <platform name="android">
+                  <preference name="android-minSdkVersion" value="22" />
+                  <preference name="android-targetSdkVersion" value="34" />
+                  <icon density="ldpi" src="www/icon-512.png" />
+                  <icon density="mdpi" src="www/icon-512.png" />
+                  <icon density="hdpi" src="www/icon-512.png" />
+                  <icon density="xhdpi" src="www/icon-512.png" />
+                  <icon density="xxhdpi" src="www/icon-512.png" />
+                  <icon density="xxxhdpi" src="www/icon-512.png" />
+              </platform>
+          </widget>
+          EOF
+          cp ../../icon-512.png www/icon-512.png
+
+      - name: Build APK
+        run: |
+          cd build/babytracker
+          cordova build android --debug
+
+      - name: Copy APK to download folder
+        run: |
+          mkdir -p download
+          cp build/babytracker/platforms/android/app/build/outputs/apk/debug/app-debug.apk download/宝宝成长记.apk
+
+      - name: Commit and push APK
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add download/
+          git diff --staged --quiet || git commit -m "Update Android APK [skip ci]"
+          git push
