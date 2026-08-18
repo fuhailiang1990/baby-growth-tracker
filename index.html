@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#FFB6C1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>宝宝成长记</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    :root {
+      --primary: #FF8FB1;
+      --primary-dark: #F06292;
+      --secondary: #A0E7E5;
+      --bg: #FFF5F7;
+      --card: #FFFFFF;
+      --text: #4A4A4A;
+      --text-light: #888888;
+      --border: #FFE4EC;
+      --shadow: 0 4px 20px rgba(255, 143, 177, 0.15);
+      --radius: 18px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { padding-bottom: calc(80px + var(--safe-bottom)); }
+    .app-header { position: sticky; top: 0; z-index: 100; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 16px 20px 12px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .app-header h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
+    .baby-info { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; font-size: 13px; opacity: 0.95; }
+    .baby-info span { background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; }
+    .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; background: rgba(255,255,255,0.96); backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: 8px 0 calc(8px + var(--safe-bottom)); z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.05); }
+    .tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--text-light); font-size: 11px; padding: 6px 0; cursor: pointer; transition: all 0.2s; }
+    .tab-btn .icon { font-size: 22px; line-height: 1; }
+    .tab-btn.active { color: var(--primary-dark); transform: scale(1.05); }
+    .page { display: none; padding: 16px; max-width: 600px; margin: 0 auto; animation: fadeIn 0.25s ease; }
+    .page.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .card-title { font-size: 16px; font-weight: 600; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; color: var(--primary-dark); }
+    .form-row { margin-bottom: 14px; }
+    label { display: block; font-size: 14px; color: var(--text); margin-bottom: 6px; font-weight: 500; }
+    input, select, textarea { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 12px; font-size: 15px; background: #fff; color: var(--text); outline: none; transition: border-color 0.2s; }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+    textarea { min-height: 70px; resize: vertical; }
+    .quick-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .tag { padding: 8px 14px; border-radius: 20px; background: var(--bg); border: 1.5px solid var(--border); font-size: 13px; color: var(--text); cursor: pointer; transition: all 0.15s; }
+    .tag.selected { background: var(--primary); color: white; border-color: var(--primary); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 14px; border: none; border-radius: 14px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 143, 177, 0.35); transition: transform 0.15s, box-shadow 0.15s; }
+    .btn:active { transform: scale(0.98); box-shadow: 0 2px 8px rgba(255, 143, 177, 0.3); }
+    .btn-secondary { background: #fff; color: var(--primary-dark); border: 1.5px solid var(--primary); box-shadow: none; }
+    .records-list { display: flex; flex-direction: column; gap: 10px; }
+    .record-item { background: var(--bg); border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
+    .record-item .time { font-size: 13px; color: var(--text-light); min-width: 46px; }
+    .record-item .content { flex: 1; padding: 0 10px; font-size: 14px; }
+    .record-item .icon { font-size: 20px; }
+    .record-item .delete { color: #ff6b6b; font-size: 18px; cursor: pointer; padding: 4px; }
+    .empty-tip { text-align: center; color: var(--text-light); font-size: 14px; padding: 24px 0; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stat-card { background: var(--card); border-radius: var(--radius); padding: 16px; text-align: center; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .stat-value { font-size: 28px; font-weight: 700; color: var(--primary-dark); }
+    .stat-label { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+    .chart-container { position: relative; height: 220px; margin: 10px 0; }
+    .chart { width: 100%; height: 100%; }
+    .suggestion-card { border-left: 4px solid var(--primary); }
+    .suggestion-card h3 { margin: 0 0 8px; font-size: 15px; color: var(--primary-dark); }
+    .suggestion-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text); }
+    .milestone-list { display: flex; flex-direction: column; gap: 10px; }
+    .milestone { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg); border-radius: 12px; }
+    .milestone .check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 13px; color: transparent; }
+    .milestone.done .check { background: var(--primary); color: white; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; border-radius: var(--radius); width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; padding: 20px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-header h2 { margin: 0; font-size: 18px; color: var(--primary-dark); }
+    .close { font-size: 24px; cursor: pointer; color: var(--text-light); }
+    .baby-form { margin-bottom: 20px; }
+    .timeline { position: relative; padding-left: 24px; }
+    .timeline::before { content: ''; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+    .timeline-item { position: relative; margin-bottom: 16px; }
+    .timeline-item::before { content: ''; position: absolute; left: -21px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); }
+    .timeline-date { font-size: 12px; color: var(--text-light); }
+    .timeline-text { font-size: 14px; margin-top: 3px; }
+    .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); background: rgba(0,0,0,0.75); color: white; padding: 12px 22px; border-radius: 24px; font-size: 14px; opacity: 0; pointer-events: none; transition: all 0.2s; z-index: 300; }
+    .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    .hidden { display: none !important; }
+    .segmented { display: flex; background: var(--bg); border-radius: 12px; padding: 4px; gap: 4px; }
+    .segmented button { flex: 1; padding: 10px; border: none; border-radius: 10px; background: transparent; color: var(--text-light); font-size: 14px; cursor: pointer; }
+    .segmented button.active { background: white; color: var(--primary-dark); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+    @media (min-width: 480px) { .dashboard-grid { grid-template-columns: repeat(4, 1fr); } }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>🍼 宝宝成长记</h1>
+    <div class="baby-info">
+      <span id="babyName">设置宝宝</span>
+      <span id="babyAge">--</span>
+    </div>
+  </header>
+
+  <!-- 今日记录 -->
+  <section class="page active" id="page-record">
+    <div class="card">
+      <h2 class="card-title">📅 今天</h2>
+      <div class="form-row">
+        <label>日期</label>
+        <input type="date" id="recordDate">
+      </div>
+      <div class="segmented">
+        <button class="active" data-cat="milk">🍼 吃奶</button>
+        <button data-cat="food">🥄 辅食</button>
+        <button data-cat="water">💧 喝水</button>
+        <button data-cat="pee">💦 小便</button>
+        <button data-cat="poop">💩 大便</button>
+      </div>
+    </div>
+
+    <div class="card" id="formCard">
+      <h2 class="card-title"><span id="catIcon">🍼</span><span id="catTitle">吃奶记录</span></h2>
+      <div id="dynamicForm"></div>
+      <button class="btn" id="saveRecord">保存记录</button>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">📝 今日记录</h2>
+      <div class="records-list" id="todayRecords"></div>
+    </div>
+  </section>
+
+  <!-- 成长数据 -->
+  <section class="page" id="page-dashboard">
+    <div class="dashboard-grid">
+      <div class="stat-card"><div class="stat-value" id="statMilk">0</div><div class="stat-label">今日奶量 ml</div></div>
+      <div class="stat-card"><div class="stat-value" id="statFood">0</div><div class="stat-label">辅食次数</div></div>
+      <div class="stat-card"><div class="stat-value" id="statPee">0</div><div class="stat-label">小便次数</div></div>
+      <div class="stat-card"><div class="stat-value" id="statPoop">0</div><div class="stat-label">大便次数</div></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">📏 生长曲线</h2>
+      <div class="form-row">
+        <label>记录身高 / 体重</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <input type="number" step="0.1" id="heightInput" placeholder="身高 cm">
+          <input type="number" step="0.01" id="weightInput" placeholder="体重 kg">
+        </div>
+        <button class="btn btn-secondary" style="margin-top:10px;" id="saveGrowth">记录生长数据</button>
+      </div>
+      <div class="chart-container"><canvas id="weightChart" class="chart"></canvas></div>
+      <div class="chart-container"><canvas id="heightChart" class="chart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">🌟 技能 & 情绪 & 运动</h2>
+      <div class="form-row">
+        <label>类型</label>
+        <select id="extraType">
+          <option value="skill">新技能 / 里程碑</option>
+          <option value="emotion">情绪记录</option>
+          <option value="exercise">运动 / 户外活动</option>
+          <option value="supplement">补剂 / 维生素</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>内容</label>
+        <input type="text" id="extraText" placeholder="例如：第一次翻身、今天很开心、户外活动30分钟、D3 1滴">
+        <div class="quick-tags" id="extraTags"></div>
+      </div>
+      <button class="btn btn-secondary" id="saveExtra">保存</button>
+      <div class="milestone-list" id="extraList" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+  <!-- 阶段建议 -->
+  <section class="page" id="page-tips">
+    <div class="card">
+      <h2 class="card-title">🎯 当前阶段重点</h2>
+      <div id="stageSummary"></div>
+    </div>
+    <div id="suggestionCards"></div>
+  </section>
+
+  <!-- 设置 -->
+  <section class="page" id="page-settings">
+    <div class="card">
+      <h2 class="card-title">👶 宝宝资料</h2>
+      <div class="baby-form">
+        <div class="form-row"><label>昵称</label><input type="text" id="settingName" placeholder="宝宝昵称"></div>
+        <div class="form-row"><label>出生日期</label><input type="date" id="settingBirth"></div>
+        <div class="form-row"><label>性别</label>
+          <select id="settingGender"><option value="boy">男宝</option><option value="girl">女宝</option><option value="unknown">保密</option></select>
+        </div>
+        <button class="btn" id="saveBaby">保存资料</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2 class="card-title">💾 数据管理</h2>
+      <button class="btn btn-secondary" id="exportData">导出备份 (JSON)</button>
+      <button class="btn btn-secondary" style="margin-top:10px;" id="importDataBtn">导入备份</button>
+      <input type="file" id="importFile" accept="application/json" class="hidden">
+      <button class="btn btn-secondary" style="margin-top:10px;color:#ff6b6b;border-color:#ff6b6b;" id="clearData">清空所有数据</button>
+    </div>
+    <div class="card">
+      <h2 class="card-title">📊 本月时间线</h2>
+      <div class="timeline" id="monthTimeline"></div>
+    </div>
+  </section>
+
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-page="page-record"><span class="icon">📝</span><span>记录</span></button>
+    <button class="tab-btn" data-page="page-dashboard"><span class="icon">📊</span><span>成长</span></button>
+    <button class="tab-btn" data-page="page-tips"><span class="icon">💡</span><span>建议</span></button>
+    <button class="tab-btn" data-page="page-settings"><span class="icon">⚙️</span><span>设置</span></button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ================= Data Store =================
+    const store = {
+      get() {
+        const raw = localStorage.getItem('babyTrackerData');
+        return raw ? JSON.parse(raw) : { baby: null, records: [], growth: [], extras: [] };
+      },
+      set(data) { localStorage.setItem('babyTrackerData', JSON.stringify(data)); },
+      addRecord(r) { const d = this.get(); r.id = Date.now(); d.records.push(r); this.set(d); return r; },
+      delRecord(id) { const d = this.get(); d.records = d.records.filter(x => x.id !== id); this.set(d); },
+      addGrowth(g) { const d = this.get(); g.id = Date.now(); d.growth.push(g); this.set(d); },
+      addExtra(e) { const d = this.get(); e.id = Date.now(); d.extras.push(e); this.set(d); },
+      delExtra(id) { const d = this.get(); d.extras = d.extras.filter(x => x.id !== id); this.set(d); },
+      saveBaby(b) { const d = this.get(); d.baby = b; this.set(d); }
+    };
+
+    // ================= Helpers =================
+    function formatDate(d) { return new Date(d).toISOString().split('T')[0]; }
+    function todayStr() { return formatDate(new Date()); }
+    function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+    function ageMonths(birth) {
+      if (!birth) return null;
+      const b = new Date(birth), now = new Date();
+      let months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
+      if (now.getDate() < b.getDate()) months--;
+      return Math.max(0, months);
+    }
+    function ageText(birth) {
+      if (!birth) return '--';
+      const m = ageMonths(birth);
+      const b = new Date(birth), now = new Date();
+      const days = Math.floor((now - b) / 86400000);
+      if (m < 1) return `${days}天`;
+      return `${m}个月${days % 30}天`;
+    }
+
+    // ================= Pages =================
+    let currentCat = 'milk';
+    const formConfigs = {
+      milk: { icon: '🍼', title: '吃奶记录', fields: [
+        { name: 'type', label: '喂养方式', type: 'text', placeholder: '例如：母乳/奶粉/混合', tags: ['母乳', '奶粉', '混合喂养'] },
+        { name: 'amount', label: '奶量 (ml)', type: 'number', placeholder: '例如：120', tags: ['30', '60', '90', '120', '150', '180', '210', '240'] },
+        { name: 'duration', label: '时长 (分钟)', type: 'number', placeholder: '例如：15', tags: ['5', '10', '15', '20', '30'] },
+        { name: 'time', label: '时间', type: 'time' }
+      ]},
+      food: { icon: '🥄', title: '辅食记录', fields: [
+        { name: 'food', label: '食物内容', type: 'text', placeholder: '例如：米粉 2勺 + 南瓜泥', tags: ['米粉', '小米粥', '蛋黄', '肉泥', '菜泥', '果泥', '面条', '馄饨'] },
+        { name: 'amount', label: '食量', type: 'text', placeholder: '例如：2勺 / 半碗', tags: ['1勺', '2勺', '半碗', '大半碗', '一碗'] },
+        { name: 'reaction', label: '反应 / 过敏', type: 'text', placeholder: '例如：爱吃 / 轻微红疹', tags: ['爱吃', '一般', '拒绝', '过敏', '轻微红疹'] },
+        { name: 'time', label: '时间', type: 'time' }
+      ]},
+      water: { icon: '💧', title: '喝水记录', fields: [
+        { name: 'amount', label: '水量 (ml)', type: 'number', placeholder: '例如：30', tags: ['10', '20', '30', '50', '80', '100'] },
+        { name: 'type', label: '类型', type: 'text', placeholder: '例如：白开水/苹果水', tags: ['白开水', '苹果水', '梨水', '温水'] },
+        { name: 'time', label: '时间', type: 'time' }
+      ]},
+      pee: { icon: '💦', title: '小便记录', fields: [
+        { name: 'time', label: '时间', type: 'time' },
+        { name: 'note', label: '备注', type: 'text', placeholder: '例如：颜色正常', tags: ['颜色正常', '偏黄', '少量', '正常量多', '换尿布时尿的'] }
+      ]},
+      poop: { icon: '💩', title: '大便记录', fields: [
+        { name: 'time', label: '时间', type: 'time' },
+        { name: 'color', label: '颜色/性状', type: 'text', placeholder: '例如：金黄色糊状', tags: ['金黄色糊状', '绿色糊状', '有奶瓣', '有粘液', '干硬', '水样', '正常成形', '未排便'] }
+      ]}
+    };
+
+    function renderForm(cat) {
+      currentCat = cat;
+      const cfg = formConfigs[cat];
+      document.getElementById('catIcon').textContent = cfg.icon;
+      document.getElementById('catTitle').textContent = cfg.title;
+      const container = document.getElementById('dynamicForm');
+      container.innerHTML = cfg.fields.map(f => `
+        <div class="form-row">
+          <label>${f.label}</label>
+          <input type="${f.type}" id="field_${f.name}" placeholder="${f.placeholder || ''}" ${f.type === 'time' ? 'value="' + new Date().toTimeString().slice(0,5) + '"' : ''}>
+          ${f.tags ? `<div class="quick-tags" data-field="${f.name}">${f.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+        </div>
+      `).join('');
+      container.querySelectorAll('.quick-tags .tag').forEach(tag => tag.onclick = () => {
+        const field = tag.parentElement.dataset.field;
+        const input = document.getElementById('field_' + field);
+        const isNumber = input.type === 'number';
+        if (isNumber) {
+          input.value = tag.textContent;
+        } else {
+          const current = input.value;
+          const val = tag.textContent;
+          input.value = current ? (current.split(/[,，]/).map(s => s.trim()).includes(val) ? current : current + '，' + val) : val;
+        }
+        tag.classList.add('selected');
+        setTimeout(() => tag.classList.remove('selected'), 200);
+      });
+      document.querySelectorAll('.segmented button').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+    }
+
+    function saveRecord() {
+      const date = document.getElementById('recordDate').value || todayStr();
+      const cfg = formConfigs[currentCat];
+      const data = { category: currentCat, date, created: Date.now() };
+      cfg.fields.forEach(f => { data[f.name] = document.getElementById('field_' + f.name).value; });
+      store.addRecord(data);
+      showToast('已保存');
+      renderTodayRecords();
+      renderDashboard();
+    }
+
+    function iconFor(cat) { return formConfigs[cat]?.icon || '📝'; }
+    function titleFor(cat) { return formConfigs[cat]?.title || cat; }
+
+    function renderTodayRecords() {
+      const date = document.getElementById('recordDate').value || todayStr();
+      const records = store.get().records.filter(r => r.date === date).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+      const list = document.getElementById('todayRecords');
+      if (!records.length) { list.innerHTML = '<div class="empty-tip">今天还没有记录，开始第一条吧~</div>'; return; }
+      list.innerHTML = records.map(r => {
+        const parts = [];
+        if (r.type) parts.push(r.type);
+        if (r.amount) parts.push(r.amount + (r.category === 'milk' || r.category === 'water' ? 'ml' : ''));
+        if (r.duration) parts.push(r.duration + '分钟');
+        if (r.food) parts.push(r.food);
+        if (r.note) parts.push(r.note);
+        if (r.color) parts.push(r.color);
+        if (r.reaction) parts.push(r.reaction);
+        const text = parts.join(' · ') || '--';
+        return `<div class="record-item">
+          <span class="time">${r.time || '--:--'}</span>
+          <span class="content"><span class="icon">${iconFor(r.category)}</span> ${titleFor(r.category)} ${text}</span>
+          <span class="delete" data-id="${r.id}">🗑</span>
+        </div>`;
+      }).join('');
+      list.querySelectorAll('.delete').forEach(btn => btn.onclick = () => { store.delRecord(Number(btn.dataset.id)); renderTodayRecords(); renderDashboard(); });
+    }
+
+    function renderDashboard() {
+      const date = document.getElementById('recordDate').value || todayStr();
+      const recs = store.get().records.filter(r => r.date === date);
+      document.getElementById('statMilk').textContent = recs.filter(r => r.category === 'milk').reduce((s, r) => s + Number(r.amount || 0), 0);
+      document.getElementById('statFood').textContent = recs.filter(r => r.category === 'food').length;
+      document.getElementById('statPee').textContent = recs.filter(r => r.category === 'pee').length;
+      document.getElementById('statPoop').textContent = recs.filter(r => r.category === 'poop').length;
+      renderGrowthCharts();
+      renderExtras();
+    }
+
+    function renderGrowthCharts() {
+      const growth = store.get().growth.sort((a, b) => new Date(a.date) - new Date(b.date));
+      drawLineChart('weightChart', growth.map(g => g.date), growth.map(g => g.weight), '体重 (kg)', '#F06292');
+      drawLineChart('heightChart', growth.map(g => g.date), growth.map(g => g.height), '身高 (cm)', '#4DB6AC');
+    }
+
+    function drawLineChart(canvasId, labels, data, label, color) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      const w = rect.width, h = rect.height;
+      ctx.clearRect(0, 0, w, h);
+      if (data.length < 2) { ctx.fillStyle = '#888'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(data.length === 0 ? '暂无数据' : `${label}: ${data[0]}`, w/2, h/2); return; }
+      const pad = 30, chartW = w - pad * 2, chartH = h - pad * 2;
+      const min = Math.min(...data) * 0.98, max = Math.max(...data) * 1.02;
+      const getX = i => pad + (i / (data.length - 1)) * chartW;
+      const getY = v => pad + chartH - ((v - min) / (max - min)) * chartH;
+      ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 3;
+      data.forEach((v, i) => { if (i === 0) ctx.moveTo(getX(i), getY(v)); else ctx.lineTo(getX(i), getY(v)); });
+      ctx.stroke();
+      data.forEach((v, i) => { ctx.beginPath(); ctx.fillStyle = color; ctx.arc(getX(i), getY(v), 4, 0, Math.PI * 2); ctx.fill(); });
+      ctx.fillStyle = '#888'; ctx.font = '11px sans-serif';
+      labels.forEach((l, i) => { if (i % Math.ceil(labels.length / 5) === 0) ctx.fillText(l.slice(5), getX(i) - 15, h - 8); });
+    }
+
+    const extraTagMap = {
+      skill: ['第一次翻身', '第一次独坐', '第一次爬行', '第一次扶站', '第一次叫妈妈', '第一次叫爸爸', '模仿声音', '拍手', '挥手再见', '指物'],
+      emotion: ['开心', '平静', '哭闹', '烦躁', '认生', '好奇', '专注'],
+      exercise: ['Tummy Time', '翻身', '爬行', '扶站', '独站', '户外散步', '游泳'],
+      supplement: ['维生素D3', '维生素AD', '钙', '益生菌', 'DHA', '铁剂']
+    };
+
+    function renderExtraTags() {
+      const type = document.getElementById('extraType').value;
+      const tags = extraTagMap[type] || [];
+      document.getElementById('extraTags').innerHTML = tags.map(t => `<span class="tag">${t}</span>`).join('');
+      document.getElementById('extraTags').querySelectorAll('.tag').forEach(tag => tag.onclick = () => {
+        const input = document.getElementById('extraText');
+        const val = tag.textContent;
+        input.value = input.value ? (input.value + '、' + val) : val;
+        tag.classList.add('selected');
+        setTimeout(() => tag.classList.remove('selected'), 200);
+      });
+    }
+
+    function renderExtras() {
+      const extras = store.get().extras.slice().sort((a, b) => b.id - a.id);
+      const list = document.getElementById('extraList');
+      if (!extras.length) { list.innerHTML = '<div class="empty-tip">还没有记录，快记下宝宝的第一次吧~</div>'; return; }
+      const labels = { skill: '新技能', emotion: '情绪', exercise: '运动', supplement: '补剂' };
+      list.innerHTML = extras.map(e => `<div class="milestone">
+        <div class="check" data-id="${e.id}">✓</div>
+        <div style="flex:1;">
+          <div style="font-size:12px;color:var(--text-light);">${e.date} · ${labels[e.type] || '其他'}</div>
+          <div style="font-size:14px;margin-top:2px;">${e.text}</div>
+        </div>
+        <span class="delete" data-id="${e.id}">🗑</span>
+      </div>`).join('');
+      list.querySelectorAll('.milestone .check').forEach(c => c.onclick = function() { this.parentElement.classList.toggle('done'); });
+      list.querySelectorAll('.delete').forEach(btn => btn.onclick = () => { store.delExtra(Number(btn.dataset.id)); renderExtras(); });
+    }
+
+    function renderTips() {
+      const baby = store.get().baby;
+      const months = ageMonths(baby?.birth);
+      const stage = getStage(months);
+      document.getElementById('stageSummary').innerHTML = `<p style="font-size:14px;line-height:1.7;margin:0;">宝宝当前约 <strong>${months === null ? '--' : months + '个月'}</strong>，处于 <strong>${stage.name}</strong>。${stage.summary}</p>`;
+      document.getElementById('suggestionCards').innerHTML = stage.tips.map(t => `<div class="card suggestion-card"><h3>${t.title}</h3><p>${t.content}</p></div>`).join('');
+    }
+
+    function getStage(months) {
+      if (months === null) return { name: '未知阶段', summary: '请先设置宝宝资料。', tips: [{ title: '⏰ 提醒', content: '到「设置」页填写宝宝的出生日期和昵称，即可获得分阶段养育建议。' }] };
+      if (months < 1) return { name: '新生儿期', summary: '以奶为主，注意黄疸、脐带护理和按需喂养。', tips: [
+        { title: '🍼 喂养建议', content: '按需哺乳，每天约 8-12 次，每次 60-90ml；出生后 15 天开始补充维生素 D3（400IU/天）。' },
+        { title: '💤 睡眠建议', content: '每日睡眠 14-17 小时，注意仰卧睡姿，避免包裹过紧。' },
+        { title: '💩 观察重点', content: '胎便转黄便约 3-5 天；小便每天至少 6 次，说明摄入充足。' }
+      ]};
+      if (months < 4) return { name: '小月龄', summary: '建立吃-玩-睡节奏，开始出现社会性微笑。', tips: [
+        { title: '🍼 喂养建议', content: '母乳/配方奶为主，奶量逐渐增至 120-180ml/次，每天 5-8 次。' },
+        { title: '🏃 运动建议', content: '多俯卧（Tummy Time），每次 3-5 分钟，促进颈部和上肢力量。' },
+        { title: '🧠 早教建议', content: '黑白/彩色卡追视、轻柔抚触、多和宝宝说话、播放舒缓音乐。' }
+      ]};
+      if (months < 7) return { name: '辅食准备期', summary: '口欲期明显，4-6 个月开始观察辅食信号。', tips: [
+        { title: '🥄 辅食建议', content: '满 6 个月引入第一口辅食（高铁米粉），由稀到稠、由单一到多样。' },
+        { title: '💧 喝水建议', content: '添加辅食后可少量喝水，每次 10-30ml，用鸭嘴杯或吸管杯练习。' },
+        { title: '🏃 运动建议', content: '加强翻身练习，引导抓握不同质地玩具。' }
+      ]};
+      if (months < 13) return { name: '辅食关键期', summary: '从泥糊状过渡到碎末、小块，锻炼咀嚼和手指食物。', tips: [
+        { title: '🥄 喂养建议', content: '每天 2-3 次辅食，保证铁、锌、优质蛋白摄入；1 岁前不加盐、糖、蜂蜜。' },
+        { title: '🏃 运动建议', content: '练习独坐、爬行、扶站，每天保证 30 分钟以上地板活动。' },
+        { title: '🧠 早教建议', content: '指认物品、模仿声音、躲猫猫、简单的因果关系玩具。' }
+      ]};
+      if (months < 24) return { name: '学步期', summary: '大运动飞速发展，自我意识萌芽，注意安全和规则建立。', tips: [
+        { title: '🥄 喂养建议', content: '逐步过渡到家庭饮食，注意均衡搭配；奶量约 400-500ml/天。' },
+        { title: '🏃 运动建议', content: '鼓励多爬行、扶走、独立行走，避免过度使用学步车。' },
+        { title: '🧠 早教建议', content: '语言输入爆发期，多回应宝宝发音；培养简单的自理能力。' }
+      ]};
+      return { name: '幼儿期', summary: '语言、社交、认知全面发展，可建立生活习惯和规则意识。', tips: [
+        { title: '🥄 喂养建议', content: '与大人同桌吃饭，培养不挑食习惯；保证奶类、蔬果、蛋肉均衡。' },
+        { title: '🏃 运动建议', content: '每天 3 小时以上户外活动，跑跳、攀爬、骑平衡车。' },
+        { title: '🧠 早教建议', content: '阅读绘本、唱儿歌、简单分类/配对游戏，鼓励表达情绪。' }
+      ]};
+    }
+
+    function renderTimeline() {
+      const all = [...store.get().records, ...store.get().extras.map(e => ({ ...e, category: e.type, time: '' }))].sort((a, b) => b.created - a.created).slice(0, 30);
+      const list = document.getElementById('monthTimeline');
+      if (!all.length) { list.innerHTML = '<div class="empty-tip">还没有记录~</div>'; return; }
+      list.innerHTML = all.map(r => `<div class="timeline-item"><div class="timeline-date">${r.date} ${r.time}</div><div class="timeline-text">${iconFor(r.category)} ${titleFor(r.category)} ${r.amount || r.food || r.text || r.note || r.color || ''}</div></div>`).join('');
+    }
+
+    function updateBabyInfo() {
+      const baby = store.get().baby;
+      document.getElementById('babyName').textContent = baby?.name || '设置宝宝';
+      document.getElementById('babyAge').textContent = ageText(baby?.birth);
+      if (baby) { document.getElementById('settingName').value = baby.name || ''; document.getElementById('settingBirth').value = baby.birth || ''; document.getElementById('settingGender').value = baby.gender || 'unknown'; }
+    }
+
+    function init() {
+      document.getElementById('recordDate').value = todayStr();
+      renderForm('milk');
+      updateBabyInfo();
+      renderTodayRecords();
+      renderDashboard();
+      renderTips();
+      renderTimeline();
+
+      // Tab switching
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.onclick = () => {
+        document.querySelectorAll('.tab-btn, .page').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.page).classList.add('active');
+        if (btn.dataset.page === 'page-dashboard') { renderDashboard(); renderGrowthCharts(); }
+        if (btn.dataset.page === 'page-tips') renderTips();
+        if (btn.dataset.page === 'page-settings') { updateBabyInfo(); renderTimeline(); }
+      });
+
+      // Category switching
+      document.querySelectorAll('.segmented button').forEach(btn => btn.onclick = () => renderForm(btn.dataset.cat));
+
+      // Save handlers
+      document.getElementById('saveRecord').onclick = saveRecord;
+      document.getElementById('extraType').onchange = renderExtraTags;
+      renderExtraTags();
+      document.getElementById('recordDate').onchange = () => { renderTodayRecords(); renderDashboard(); };
+      document.getElementById('saveGrowth').onclick = () => {
+        const h = document.getElementById('heightInput').value;
+        const w = document.getElementById('weightInput').value;
+        if (!h && !w) { showToast('请填写身高或体重'); return; }
+        store.addGrowth({ date: todayStr(), height: h, weight: w, created: Date.now() });
+        document.getElementById('heightInput').value = ''; document.getElementById('weightInput').value = '';
+        showToast('生长数据已保存'); renderDashboard();
+      };
+      document.getElementById('saveExtra').onclick = () => {
+        const type = document.getElementById('extraType').value;
+        const text = document.getElementById('extraText').value.trim();
+        if (!text) { showToast('请填写内容'); return; }
+        store.addExtra({ type, text, date: todayStr(), created: Date.now() });
+        document.getElementById('extraText').value = '';
+        showToast('已保存'); renderExtras();
+        renderTimeline();
+      };
+      document.getElementById('saveBaby').onclick = () => {
+        store.saveBaby({ name: document.getElementById('settingName').value.trim(), birth: document.getElementById('settingBirth').value, gender: document.getElementById('settingGender').value });
+        updateBabyInfo(); renderTips(); showToast('宝宝资料已保存');
+      };
+      document.getElementById('exportData').onclick = () => {
+        const blob = new Blob([JSON.stringify(store.get(), null, 2)], { type: 'application/json' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `baby-tracker-backup-${todayStr()}.json`; a.click();
+      };
+      document.getElementById('importDataBtn').onclick = () => document.getElementById('importFile').click();
+      document.getElementById('importFile').onchange = e => {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => { try { store.set(JSON.parse(reader.result)); updateBabyInfo(); renderTodayRecords(); renderDashboard(); renderTips(); renderTimeline(); showToast('导入成功'); } catch { showToast('导入失败'); } };
+        reader.readAsText(file);
+      };
+      document.getElementById('clearData').onclick = () => { if (confirm('确定清空所有数据？此操作不可恢复')) { localStorage.removeItem('babyTrackerData'); location.reload(); } };
+
+      window.addEventListener('resize', renderGrowthCharts);
+    }
+
+    init();
+
+    // Service worker registration for PWA offline support
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('data:text/javascript;base64,' + btoa(`self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{const copy=res.clone();caches.open('baby-v1').then(c=>c.put(e.request,copy));return res;}))));`)).catch(()=>{});
+    }
+  </script>
+</body>
+</html>

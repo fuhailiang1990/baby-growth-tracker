@@ -1,0 +1,15 @@
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Node / npm
+node_modules/
+package-lock.json
+yarn.lock
