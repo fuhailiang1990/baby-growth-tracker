@@ -8,7 +8,8 @@
 - **成长里程碑**：新技能、情绪、运动、补剂 / 维生素
 - **生长曲线**：身高 / 体重趋势图
 - **阶段建议**：按宝宝月龄给出喂养、睡眠、运动、早教建议
-- **数据管理**：本地 localStorage 存储，支持 JSON 导入 / 导出 / 清空
+- **数据管理**：本地 localStorage 缓存 + Firebase Realtime Database 云同步，支持 JSON 导入 / 导出 / 清空
+- **云同步**：自动同步到 Firebase，换设备登录同一账号可共享数据
 
 ## 如何打开
 
@@ -40,7 +41,40 @@ http://<电脑IP>:8080
 
 ## 数据安全
 
-所有数据均保存在浏览器本地，不会上传服务器。建议定期「导出备份」。
+- 数据默认保存在浏览器本地（localStorage），同时自动同步到 Firebase Realtime Database。
+- 每个设备/浏览器以匿名账号登录，数据隔离存储。
+- 建议定期「导出备份」到本地 JSON，以防浏览器数据被清除。
+
+## Firebase 配置
+
+本项目已集成 Firebase。如需自行部署：
+
+1. 在 [Firebase Console](https://console.firebase.google.com/) 创建项目。
+2. 开启 **Authentication → Sign-in method → 匿名登录**。
+3. 创建 **Realtime Database**，并设置安全规则（示例）：
+
+```json
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth.uid == $uid",
+        ".write": "auth.uid == $uid"
+      }
+    }
+  }
+}
+```
+
+4. 将 `index.html` 中的 `firebaseConfig` 替换为你自己的配置。
+
+## 多设备共享
+
+- 当前默认使用 **Firebase 匿名登录**，每台设备会生成一个独立的匿名 UID，因此不同设备之间的数据**不会自动合并**。
+- 如需在手机、平板、电脑之间共享同一份数据：
+  1. 在 Firebase Console 启用 **Google 登录** 或 **邮箱/密码登录**。
+  2. 在「设置」页（或代码中）调用 `firebase.auth().signInWithPopup(provider)` 或 `signInWithEmailAndPassword(...)`。
+  3. 所有设备登录同一个账号后，数据会同步到同一个 `users/{uid}/data` 节点。
 
 ## 文件说明
 
