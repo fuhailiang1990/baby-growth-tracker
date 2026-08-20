@@ -204,9 +204,14 @@
       <p style="font-size:14px;color:var(--text-light);margin:0 0 12px;">
         状态：<strong id="syncStatus">--</strong>
       </p>
-      <p style="font-size:13px;color:var(--text-light);margin:0;line-height:1.5;">
-        数据已同步到 Firebase。换设备时登录同一账号即可共享数据。<br>
-        当前使用匿名登录，如需多设备共享，请在 Firebase 控制台启用 Google / 邮箱登录。
+      <div class="form-row">
+        <label>同步码（多设备输入同一串字符即可共享）</label>
+        <input type="text" id="syncCodeInput" placeholder="例如：mamababa2026" style="margin-bottom:8px;">
+        <button class="btn btn-secondary" id="saveSyncCode">保存同步码</button>
+      </div>
+      <p style="font-size:13px;color:var(--text-light);margin:12px 0 0;line-height:1.5;">
+        在两台设备输入同一个同步码，数据就会实时共享。不填则只保存在当前设备。<br>
+        当前使用匿名登录验证，云端数据通过同步码隔离。
       </p>
     </div>
 
@@ -274,6 +279,11 @@
     let fbSyncEnabled = false;
     let fbPendingWrite = null;
     let fbListenerSet = false;
+    let currentRef = null;
+
+    const syncCodeKey = 'babyTrackerSyncCode';
+    function getSyncCode() { return localStorage.getItem(syncCodeKey)?.trim(); }
+    function syncRef() { return firebase.database().ref(`users/${getSyncCode() || fbUid}/data`); }
 
     try {
       firebase.initializeApp(firebaseConfig);
@@ -286,7 +296,7 @@
       if (!fbSyncEnabled) return '未启用';
       if (!fbUid) return '连接中…';
       if (!fbListenerSet) return '连接中…';
-      return '已同步';
+      return getSyncCode() ? '已同步（码：' + getSyncCode() + '）' : '已同步（本设备）';
     }
 
     function updateSyncUI() {
@@ -312,7 +322,7 @@
       if (!fbSyncEnabled || !fbUid) return;
       if (fbPendingWrite) clearTimeout(fbPendingWrite);
       fbPendingWrite = setTimeout(() => {
-        firebase.database().ref(`users/${fbUid}/data`).set(data)
+        syncRef().set(data)
           .then(() => { updateSyncUI(); })
           .catch(err => console.error('Sync failed', err));
       }, 300);
@@ -320,14 +330,14 @@
 
     function loadFromCloud() {
       if (!fbSyncEnabled || !fbUid) return;
-      firebase.database().ref(`users/${fbUid}/data`).once('value')
+      syncRef().once('value')
         .then(snapshot => {
           const cloud = snapshot.val();
           if (cloud) {
             const merged = mergeData(store.get(), cloud);
             store.set(merged, { skipSync: true });
           } else {
-            firebase.database().ref(`users/${fbUid}/data`).set(store.get());
+            syncRef().set(store.get());
           }
           updateSyncUI();
           renderAll();
@@ -338,9 +348,10 @@
 
     function setupCloudListener() {
       if (!fbSyncEnabled || !fbUid || fbListenerSet) return;
+      currentRef = syncRef();
       fbListenerSet = true;
       updateSyncUI();
-      firebase.database().ref(`users/${fbUid}/data`).on('value', snapshot => {
+      currentRef.on('value', snapshot => {
         const cloud = snapshot.val();
         if (!cloud) return;
         const local = store.get();
@@ -353,8 +364,19 @@
       }, err => {
         console.error('Cloud listener error', err);
         fbListenerSet = false;
+        currentRef = null;
         updateSyncUI();
       });
+    }
+
+    function restartSyncWithCode(code) {
+      const newCode = code.trim();
+      localStorage.setItem(syncCodeKey, newCode);
+      document.getElementById('syncCodeInput').value = newCode;
+      if (currentRef) { currentRef.off('value'); }
+      fbListenerSet = false;
+      currentRef = null;
+      loadFromCloud();
     }
 
     function renderAll() {
@@ -664,6 +686,13 @@
         store.saveBaby({ name: document.getElementById('settingName').value.trim(), birth: document.getElementById('settingBirth').value, gender: document.getElementById('settingGender').value });
         updateBabyInfo(); renderTips(); showToast('宝宝资料已保存');
       };
+      document.getElementById('saveSyncCode').onclick = () => {
+        const code = document.getElementById('syncCodeInput').value.trim();
+        if (!code) { showToast('请输入同步码'); return; }
+        restartSyncWithCode(code);
+        showToast('同步码已保存，开始同步');
+      };
+      document.getElementById('syncCodeInput').value = getSyncCode() || '';
       document.getElementById('exportData').onclick = () => {
         const blob = new Blob([JSON.stringify(store.get(), null, 2)], { type: 'application/json' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `baby-tracker-backup-${todayStr()}.json`; a.click();
