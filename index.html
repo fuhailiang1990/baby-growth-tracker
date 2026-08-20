@@ -243,9 +243,13 @@
     const store = {
       get() {
         const raw = localStorage.getItem('babyTrackerData');
-        return raw ? JSON.parse(raw) : { baby: null, records: [], growth: [], extras: [] };
+        return raw ? JSON.parse(raw) : { baby: null, records: [], growth: [], extras: [], lastUpdated: 0 };
       },
-      set(data) { localStorage.setItem('babyTrackerData', JSON.stringify(data)); syncToCloud(data); },
+      set(data, { skipSync = false } = {}) {
+        data.lastUpdated = Date.now();
+        localStorage.setItem('babyTrackerData', JSON.stringify(data));
+        if (!skipSync) syncToCloud(data);
+      },
       addRecord(r) { const d = this.get(); r.id = Date.now(); d.records.push(r); this.set(d); return r; },
       delRecord(id) { const d = this.get(); d.records = d.records.filter(x => x.id !== id); this.set(d); },
       addGrowth(g) { const d = this.get(); g.id = Date.now(); d.growth.push(g); this.set(d); },
@@ -269,6 +273,7 @@
     let fbUid = null;
     let fbSyncEnabled = false;
     let fbPendingWrite = null;
+    let fbListenerSet = false;
 
     try {
       firebase.initializeApp(firebaseConfig);
@@ -280,6 +285,7 @@
     function syncStatusText() {
       if (!fbSyncEnabled) return '未启用';
       if (!fbUid) return '连接中…';
+      if (!fbListenerSet) return '连接中…';
       return '已同步';
     }
 
@@ -288,11 +294,26 @@
       if (el) el.textContent = syncStatusText();
     }
 
+    function mergeData(local, cloud) {
+      if (!cloud) return local;
+      // 以时间戳为基准：云端更新就用云端全量数据
+      if ((cloud.lastUpdated || 0) > (local.lastUpdated || 0)) return cloud;
+      // 本地更新时，也合并云端可能有的、本地没有的新记录（按 id 去重）
+      const localIds = new Set(local.records.map(r => r.id));
+      const growthIds = new Set(local.growth.map(g => g.id));
+      const extraIds = new Set(local.extras.map(e => e.id));
+      cloud.records?.forEach(r => { if (!localIds.has(r.id)) local.records.push(r); });
+      cloud.growth?.forEach(g => { if (!growthIds.has(g.id)) local.growth.push(g); });
+      cloud.extras?.forEach(e => { if (!extraIds.has(e.id)) local.extras.push(e); });
+      return local;
+    }
+
     function syncToCloud(data) {
       if (!fbSyncEnabled || !fbUid) return;
       if (fbPendingWrite) clearTimeout(fbPendingWrite);
       fbPendingWrite = setTimeout(() => {
         firebase.database().ref(`users/${fbUid}/data`).set(data)
+          .then(() => { updateSyncUI(); })
           .catch(err => console.error('Sync failed', err));
       }, 300);
     }
@@ -303,14 +324,37 @@
         .then(snapshot => {
           const cloud = snapshot.val();
           if (cloud) {
-            localStorage.setItem('babyTrackerData', JSON.stringify(cloud));
+            const merged = mergeData(store.get(), cloud);
+            store.set(merged, { skipSync: true });
           } else {
             firebase.database().ref(`users/${fbUid}/data`).set(store.get());
           }
           updateSyncUI();
           renderAll();
+          setupCloudListener();
         })
         .catch(err => { console.error('Load from cloud failed', err); updateSyncUI(); });
+    }
+
+    function setupCloudListener() {
+      if (!fbSyncEnabled || !fbUid || fbListenerSet) return;
+      fbListenerSet = true;
+      updateSyncUI();
+      firebase.database().ref(`users/${fbUid}/data`).on('value', snapshot => {
+        const cloud = snapshot.val();
+        if (!cloud) return;
+        const local = store.get();
+        // 云端数据更新才覆盖本地，避免本地刚写入时的回环覆盖
+        if ((cloud.lastUpdated || 0) > (local.lastUpdated || 0)) {
+          localStorage.setItem('babyTrackerData', JSON.stringify(cloud));
+          renderAll();
+        }
+        updateSyncUI();
+      }, err => {
+        console.error('Cloud listener error', err);
+        fbListenerSet = false;
+        updateSyncUI();
+      });
     }
 
     function renderAll() {
