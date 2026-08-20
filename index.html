@@ -97,10 +97,16 @@
 </head>
 <body>
   <header class="app-header">
-    <h1>🍼 宝宝成长记</h1>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h1 style="flex:1;">🍼 宝宝成长记</h1>
+      <button id="syncBtn" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:12px;padding:6px 10px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:4px;">
+        <span id="syncIcon">🔄</span><span>同步</span>
+      </button>
+    </div>
     <div class="baby-info">
       <span id="babyName">设置宝宝</span>
       <span id="babyAge">--</span>
+      <span id="recorderTag" style="background:rgba(255,255,255,0.15);">👤 --</span>
     </div>
   </header>
 
@@ -191,6 +197,7 @@
     <div class="card">
       <h2 class="card-title">👶 宝宝资料</h2>
       <div class="baby-form">
+      <div class="form-row"><label>记录人昵称</label><input type="text" id="settingRecorder" placeholder="例如：妈妈、爸爸"></div>
         <div class="form-row"><label>昵称</label><input type="text" id="settingName" placeholder="宝宝昵称"></div>
         <div class="form-row"><label>出生日期</label><input type="date" id="settingBirth"></div>
         <div class="form-row"><label>性别</label>
@@ -245,6 +252,10 @@
 
   <script>
     // ================= Data Store =================
+    const recorderKey = 'babyTrackerRecorder';
+    function getRecorder() { return localStorage.getItem(recorderKey)?.trim() || '我'; }
+    function setRecorder(name) { localStorage.setItem(recorderKey, name.trim() || '我'); }
+
     const store = {
       get() {
         const raw = localStorage.getItem('babyTrackerData');
@@ -255,10 +266,10 @@
         localStorage.setItem('babyTrackerData', JSON.stringify(data));
         if (!skipSync) syncToCloud(data);
       },
-      addRecord(r) { const d = this.get(); r.id = Date.now(); d.records.push(r); this.set(d); return r; },
+      addRecord(r) { const d = this.get(); r.id = Date.now(); r.recordedBy = getRecorder(); d.records.push(r); this.set(d); return r; },
       delRecord(id) { const d = this.get(); d.records = d.records.filter(x => x.id !== id); this.set(d); },
-      addGrowth(g) { const d = this.get(); g.id = Date.now(); d.growth.push(g); this.set(d); },
-      addExtra(e) { const d = this.get(); e.id = Date.now(); d.extras.push(e); this.set(d); },
+      addGrowth(g) { const d = this.get(); g.id = Date.now(); g.recordedBy = getRecorder(); d.growth.push(g); this.set(d); },
+      addExtra(e) { const d = this.get(); e.id = Date.now(); e.recordedBy = getRecorder(); d.extras.push(e); this.set(d); },
       delExtra(id) { const d = this.get(); d.extras = d.extras.filter(x => x.id !== id); this.set(d); },
       saveBaby(b) { const d = this.get(); d.baby = b; this.set(d); }
     };
@@ -390,21 +401,23 @@
     // ================= Helpers =================
     function formatDate(d) { return new Date(d).toISOString().split('T')[0]; }
     function todayStr() { return formatDate(new Date()); }
+    function minutesFromTime(t) { if (!t) return 0; const [h, m] = t.split(':'); return (Number(h) || 0) * 60 + (Number(m) || 0); }
     function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
     function ageMonths(birth) {
       if (!birth) return null;
-      const b = new Date(birth), now = new Date();
+      const b = new Date(birth + 'T00:00:00'), now = new Date();
       let months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
       if (now.getDate() < b.getDate()) months--;
       return Math.max(0, months);
     }
     function ageText(birth) {
       if (!birth) return '--';
-      const m = ageMonths(birth);
-      const b = new Date(birth), now = new Date();
+      const b = new Date(birth + 'T00:00:00'), now = new Date();
       const days = Math.floor((now - b) / 86400000);
-      if (m < 1) return `${days}天`;
-      return `${m}个月${days % 30}天`;
+      if (days < 30) return `${days}天`;
+      const m = ageMonths(birth);
+      const d = days - m * 30;
+      return `${m}个月${d}天`;
     }
 
     // ================= Pages =================
@@ -483,7 +496,7 @@
 
     function renderTodayRecords() {
       const date = document.getElementById('recordDate').value || todayStr();
-      const records = store.get().records.filter(r => r.date === date).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+      const records = store.get().records.filter(r => r.date === date).sort((a, b) => minutesFromTime(a.time) - minutesFromTime(b.time));
       const list = document.getElementById('todayRecords');
       if (!records.length) { list.innerHTML = '<div class="empty-tip">今天还没有记录，开始第一条吧~</div>'; return; }
       list.innerHTML = records.map(r => {
@@ -496,9 +509,10 @@
         if (r.color) parts.push(r.color);
         if (r.reaction) parts.push(r.reaction);
         const text = parts.join(' · ') || '--';
+        const who = r.recordedBy ? `<span style="font-size:11px;color:var(--text-light);margin-left:6px;">@${r.recordedBy}</span>` : '';
         return `<div class="record-item">
           <span class="time">${r.time || '--:--'}</span>
-          <span class="content"><span class="icon">${iconFor(r.category)}</span> ${titleFor(r.category)} ${text}</span>
+          <span class="content"><span class="icon">${iconFor(r.category)}</span> ${titleFor(r.category)} ${text}${who}</span>
           <span class="delete" data-id="${r.id}">🗑</span>
         </div>`;
       }).join('');
@@ -628,14 +642,19 @@
       const all = [...store.get().records, ...store.get().extras.map(e => ({ ...e, category: e.type, time: '' }))].sort((a, b) => b.created - a.created).slice(0, 30);
       const list = document.getElementById('monthTimeline');
       if (!all.length) { list.innerHTML = '<div class="empty-tip">还没有记录~</div>'; return; }
-      list.innerHTML = all.map(r => `<div class="timeline-item"><div class="timeline-date">${r.date} ${r.time}</div><div class="timeline-text">${iconFor(r.category)} ${titleFor(r.category)} ${r.amount || r.food || r.text || r.note || r.color || ''}</div></div>`).join('');
+      list.innerHTML = all.map(r => {
+        const who = r.recordedBy ? `<span style="font-size:11px;color:var(--text-light);">@${r.recordedBy}</span>` : '';
+        return `<div class="timeline-item"><div class="timeline-date">${r.date} ${r.time} ${who}</div><div class="timeline-text">${iconFor(r.category)} ${titleFor(r.category)} ${r.amount || r.food || r.text || r.note || r.color || ''}</div></div>`;
+      }).join('');
     }
 
     function updateBabyInfo() {
       const baby = store.get().baby;
       document.getElementById('babyName').textContent = baby?.name || '设置宝宝';
       document.getElementById('babyAge').textContent = ageText(baby?.birth);
+      document.getElementById('recorderTag').textContent = '👤 ' + getRecorder();
       if (baby) { document.getElementById('settingName').value = baby.name || ''; document.getElementById('settingBirth').value = baby.birth || ''; document.getElementById('settingGender').value = baby.gender || 'unknown'; }
+      document.getElementById('settingRecorder').value = getRecorder();
     }
 
     function init() {
@@ -684,6 +703,7 @@
       };
       document.getElementById('saveBaby').onclick = () => {
         store.saveBaby({ name: document.getElementById('settingName').value.trim(), birth: document.getElementById('settingBirth').value, gender: document.getElementById('settingGender').value });
+        setRecorder(document.getElementById('settingRecorder').value);
         updateBabyInfo(); renderTips(); showToast('宝宝资料已保存');
       };
       document.getElementById('saveSyncCode').onclick = () => {
@@ -693,6 +713,13 @@
         showToast('同步码已保存，开始同步');
       };
       document.getElementById('syncCodeInput').value = getSyncCode() || '';
+      document.getElementById('syncBtn').onclick = () => {
+        const icon = document.getElementById('syncIcon');
+        icon.textContent = '⏳';
+        loadFromCloud();
+        showToast('正在同步…');
+        setTimeout(() => icon.textContent = '🔄', 1500);
+      };
       document.getElementById('exportData').onclick = () => {
         const blob = new Blob([JSON.stringify(store.get(), null, 2)], { type: 'application/json' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `baby-tracker-backup-${todayStr()}.json`; a.click();
@@ -714,14 +741,63 @@
         updateSyncUI();
       }
 
+      // Pull-to-refresh on record page
+      setupPullToRefresh();
+
+      // Sync when app comes back to foreground
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && fbSyncEnabled && fbUid) { loadFromCloud(); }
+      });
+
       window.addEventListener('resize', renderGrowthCharts);
+    }
+
+    function setupPullToRefresh() {
+      const page = document.getElementById('page-record');
+      let startY = 0, startX = 0, pulling = false, threshold = 80;
+      const indicator = document.createElement('div');
+      indicator.id = 'pullIndicator';
+      indicator.style.cssText = 'height:0;overflow:hidden;text-align:center;color:var(--primary-dark);font-size:13px;line-height:40px;transition:height .15s;flex-shrink:0;';
+      page.insertBefore(indicator, page.firstChild);
+
+      page.addEventListener('touchstart', e => {
+        if (page.scrollTop > 0) return;
+        startY = e.touches[0].clientY;
+        startX = e.touches[0].clientX;
+        pulling = true;
+      }, { passive: true });
+
+      page.addEventListener('touchmove', e => {
+        if (!pulling || page.scrollTop > 0) return;
+        const y = e.touches[0].clientY;
+        const x = e.touches[0].clientX;
+        const dy = y - startY;
+        const dx = Math.abs(x - startX);
+        if (dy > 0 && dy > dx) {
+          e.preventDefault();
+          const h = Math.min(dy * 0.5, threshold + 20);
+          indicator.style.height = h + 'px';
+          indicator.textContent = h > threshold ? '松开同步' : '下拉同步';
+        }
+      }, { passive: false });
+
+      page.addEventListener('touchend', () => {
+        if (!pulling) return;
+        pulling = false;
+        const h = parseFloat(indicator.style.height) || 0;
+        indicator.style.height = '0';
+        if (h > threshold) {
+          showToast('正在同步…');
+          loadFromCloud();
+        }
+      });
     }
 
     init();
 
     // Service worker registration for PWA offline support
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('data:text/javascript;base64,' + btoa(`self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{const copy=res.clone();caches.open('baby-v1').then(c=>c.put(e.request,copy));return res;}))));`)).catch(()=>{});
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
     }
   </script>
 </body>
