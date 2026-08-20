@@ -13,3 +13,7 @@ Thumbs.db
 node_modules/
 package-lock.json
 yarn.lock
+
+# Android build
+android-sdk/
+android-twa/
