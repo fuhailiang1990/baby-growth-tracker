@@ -115,7 +115,7 @@
     .segmented { display: flex; background: var(--bg); border-radius: 12px; padding: 4px; gap: 4px; }
     .segmented button { flex: 1; padding: 10px; border: none; border-radius: 10px; background: transparent; color: var(--text-light); font-size: 14px; cursor: pointer; }
     .segmented button.active { background: white; color: var(--primary-dark); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-    @media (min-width: 480px) { .dashboard-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 480px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); } }
   </style>
 </head>
 <body>
@@ -147,6 +147,7 @@
         <button data-cat="water">💧 喝水</button>
         <button data-cat="pee">💦 小便</button>
         <button data-cat="poop">💩 大便</button>
+        <button data-cat="sleep">💤 睡眠</button>
       </div>
     </div>
 
@@ -169,6 +170,13 @@
       <div class="stat-card"><div class="stat-value" id="statFood">0</div><div class="stat-label">辅食次数</div></div>
       <div class="stat-card"><div class="stat-value" id="statPee">0</div><div class="stat-label">小便次数</div></div>
       <div class="stat-card"><div class="stat-value" id="statPoop">0</div><div class="stat-label">大便次数</div></div>
+      <div class="stat-card"><div class="stat-value" id="statSleep">0</div><div class="stat-label">睡眠分钟</div></div>
+      <div class="stat-card"><div class="stat-value" id="statWater">0</div><div class="stat-label">喝水 ml</div></div>
+    </div>
+
+    <div class="card" id="reminderCard">
+      <h2 class="card-title">⏰ 下次提醒</h2>
+      <div id="reminderList"></div>
     </div>
 
     <div class="card">
@@ -183,6 +191,12 @@
       </div>
       <div class="chart-container"><canvas id="weightChart" class="chart"></canvas></div>
       <div class="chart-container"><canvas id="heightChart" class="chart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">💉 疫苗计划</h2>
+      <div id="vaccineSummary"></div>
+      <div id="vaccineList"></div>
     </div>
 
     <div class="card">
@@ -217,6 +231,16 @@
 
   <!-- 设置 -->
   <section class="page" id="page-settings">
+    <div class="card">
+      <h2 class="card-title">⏰ 提醒设置</h2>
+      <p style="font-size:13px;color:var(--text-light);margin:0 0 12px;line-height:1.5;">设置后首页会显示下次建议时间。浏览器通知需授权才能弹窗提醒。</p>
+      <div class="form-row"><label>喂奶间隔（分钟）</label><input type="number" id="reminderMilk" value="180" placeholder="例如：180"></div>
+      <div class="form-row"><label>喝水间隔（分钟）</label><input type="number" id="reminderWater" value="120" placeholder="例如：120"></div>
+      <div class="form-row"><label>睡眠间隔（分钟）</label><input type="number" id="reminderSleep" value="240" placeholder="例如：240"></div>
+      <button class="btn btn-secondary" id="saveReminders">保存提醒设置</button>
+      <button class="btn btn-secondary" style="margin-top:10px;" id="requestNotify">开启浏览器通知</button>
+    </div>
+
     <div class="card">
       <h2 class="card-title">👶 宝宝资料</h2>
       <div class="baby-form">
@@ -289,6 +313,8 @@
         records: Array.isArray(data.records) ? data.records : [],
         growth: Array.isArray(data.growth) ? data.growth : [],
         extras: Array.isArray(data.extras) ? data.extras : [],
+        vaccines: Array.isArray(data.vaccines) ? data.vaccines : [],
+        reminders: data.reminders && typeof data.reminders === 'object' ? data.reminders : { milk: 180, water: 120, sleep: 240 },
         lastUpdated: data.lastUpdated || 0
       };
     }
@@ -314,7 +340,9 @@
       addGrowth(g) { const d = this.get(); g.id = Date.now(); g.recordedBy = getRecorder(); d.growth.push(g); this.set(d); },
       addExtra(e) { const d = this.get(); e.id = Date.now(); e.recordedBy = getRecorder(); d.extras.push(e); this.set(d); },
       delExtra(id) { const d = this.get(); d.extras = d.extras.filter(x => x.id !== id); this.set(d); },
-      saveBaby(b) { const d = this.get(); d.baby = b; this.set(d); }
+      saveBaby(b) { const d = this.get(); d.baby = b; this.set(d); },
+      saveVaccines(v) { const d = this.get(); d.vaccines = v; this.set(d); },
+      saveReminders(r) { const d = this.get(); d.reminders = r; this.set(d); }
     };
 
     // ================= Firebase Sync =================
@@ -366,6 +394,8 @@
         cloud.records = cloud.records.length ? cloud.records : local.records;
         cloud.growth = cloud.growth.length ? cloud.growth : local.growth;
         cloud.extras = cloud.extras.length ? cloud.extras : local.extras;
+        cloud.vaccines = cloud.vaccines.length ? cloud.vaccines : local.vaccines;
+        cloud.reminders = cloud.reminders.milk !== undefined ? cloud.reminders : local.reminders;
         return cloud;
       }
       // 本地更新时，也合并云端可能有的、本地没有的新记录（按 id 去重）
@@ -375,6 +405,7 @@
       cloud.records.forEach(r => { if (!localIds.has(r.id)) local.records.push(r); });
       cloud.growth.forEach(g => { if (!growthIds.has(g.id)) local.growth.push(g); });
       cloud.extras.forEach(e => { if (!extraIds.has(e.id)) local.extras.push(e); });
+      if (cloud.vaccines.length && !local.vaccines.length) local.vaccines = cloud.vaccines;
       return local;
     }
 
@@ -452,6 +483,12 @@
     function formatDate(d) { return new Date(d).toISOString().split('T')[0]; }
     function todayStr() { return formatDate(new Date()); }
     function minutesFromTime(t) { if (!t) return 0; const [h, m] = t.split(':'); return (Number(h) || 0) * 60 + (Number(m) || 0); }
+    function sleepMinutes(start, end) {
+      if (!start) return 0;
+      let s = minutesFromTime(start), e = end ? minutesFromTime(end) : minutesFromTime(new Date().toTimeString().slice(0,5));
+      if (e < s) e += 1440;
+      return e - s;
+    }
     function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
     function showError(msg) { const box = document.getElementById('errorBox'); if (!box) return; box.textContent = msg; box.style.display = 'block'; }
     function ageMonths(birth) {
@@ -498,6 +535,11 @@
       poop: { icon: '💩', title: '大便记录', fields: [
         { name: 'time', label: '时间', type: 'time' },
         { name: 'color', label: '颜色/性状', type: 'text', placeholder: '例如：金黄色糊状', tags: ['金黄色糊状', '绿色糊状', '有奶瓣', '有粘液', '干硬', '水样', '正常成形', '未排便'] }
+      ]},
+      sleep: { icon: '💤', title: '睡眠记录', fields: [
+        { name: 'start', label: '入睡时间', type: 'time' },
+        { name: 'end', label: '醒来时间', type: 'time' },
+        { name: 'quality', label: '睡眠质量', type: 'text', placeholder: '例如：安稳 / 易醒', tags: ['安稳', '易醒', '哭闹', '入睡困难', '抱睡', '奶睡'] }
       ]}
     };
 
@@ -555,6 +597,9 @@
         if (r.type) parts.push(r.type);
         if (r.amount) parts.push(r.amount + (r.category === 'milk' || r.category === 'water' ? 'ml' : ''));
         if (r.duration) parts.push(r.duration + '分钟');
+        if (r.start && r.end) parts.push(`${r.start}-${r.end}`);
+        else if (r.start) parts.push(`从${r.start}`);
+        if (r.quality) parts.push(r.quality);
         if (r.food) parts.push(r.food);
         if (r.note) parts.push(r.note);
         if (r.color) parts.push(r.color);
@@ -562,7 +607,7 @@
         const text = parts.join(' · ') || '--';
         const who = r.recordedBy ? `<span style="font-size:11px;color:var(--text-light);margin-left:6px;">@${r.recordedBy}</span>` : '';
         return `<div class="record-item">
-          <span class="time">${r.time || '--:--'}</span>
+          <span class="time">${r.time || r.start || '--:--'}</span>
           <span class="content"><span class="icon">${iconFor(r.category)}</span> ${titleFor(r.category)} ${text}${who}</span>
           <span class="delete" data-id="${r.id}">🗑</span>
         </div>`;
@@ -577,8 +622,12 @@
       document.getElementById('statFood').textContent = recs.filter(r => r.category === 'food').length;
       document.getElementById('statPee').textContent = recs.filter(r => r.category === 'pee').length;
       document.getElementById('statPoop').textContent = recs.filter(r => r.category === 'poop').length;
+      document.getElementById('statWater').textContent = recs.filter(r => r.category === 'water').reduce((s, r) => s + Number(r.amount || 0), 0);
+      document.getElementById('statSleep').textContent = recs.filter(r => r.category === 'sleep').reduce((s, r) => s + sleepMinutes(r.start, r.end), 0);
       renderGrowthCharts();
       renderExtras();
+      renderReminders();
+      renderVaccines();
     }
 
     function renderGrowthCharts() {
@@ -648,6 +697,136 @@
       list.querySelectorAll('.delete').forEach(btn => btn.onclick = () => { store.delExtra(Number(btn.dataset.id)); renderExtras(); });
     }
 
+    let notifiedKeys = new Set();
+    function checkNotifications() {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const d = store.get();
+      const recs = d.records;
+      const date = todayStr();
+      const todayRecs = recs.filter(r => r.date === date);
+      const reminders = d.reminders || { milk: 180, water: 120, sleep: 240 };
+      const nowMin = minutesFromTime(new Date().toTimeString().slice(0,5));
+      const calcNext = (cat, field) => {
+        const last = todayRecs.filter(r => r.category === cat).sort((a, b) => minutesFromTime(field === 'sleep' ? a.end || a.start : a.time) - minutesFromTime(field === 'sleep' ? b.end || b.start : b.time)).pop();
+        if (!last) return null;
+        const lastMin = minutesFromTime(field === 'sleep' ? last.end || last.start : last.time);
+        return lastMin + (reminders[cat] || 0);
+      };
+      const items = [
+        { key: 'milk', icon: '🍼', label: '喂奶', next: calcNext('milk', 'time') },
+        { key: 'water', icon: '💧', label: '喝水', next: calcNext('water', 'time') },
+        { key: 'sleep', icon: '💤', label: '睡眠', next: calcNext('sleep', 'sleep') }
+      ];
+      items.forEach(it => {
+        if (it.next === null) return;
+        const key = `${date}-${it.key}-${it.next}`;
+        if (it.next <= nowMin && !notifiedKeys.has(key)) {
+          notifiedKeys.add(key);
+          new Notification(`该${it.label}了`, { body: `${it.icon} 到时间给宝宝${it.label}啦`, icon: 'icon-192.png' });
+        }
+      });
+    }
+
+    function renderReminders() {
+      const d = store.get();
+      const recs = d.records;
+      const date = document.getElementById('recordDate').value || todayStr();
+      const todayRecs = recs.filter(r => r.date === date);
+      const reminders = d.reminders || { milk: 180, water: 120, sleep: 240 };
+      const list = document.getElementById('reminderList');
+      const calcNext = (cat, field) => {
+        const last = todayRecs.filter(r => r.category === cat).sort((a, b) => minutesFromTime(field === 'sleep' ? a.end || a.start : a.time) - minutesFromTime(field === 'sleep' ? b.end || b.start : b.time)).pop();
+        if (!last) return null;
+        const lastMin = minutesFromTime(field === 'sleep' ? last.end || last.start : last.time);
+        return lastMin + (reminders[cat] || 0);
+      };
+      const items = [
+        { icon: '🍼', label: '喂奶', next: calcNext('milk', 'time'), interval: reminders.milk },
+        { icon: '💧', label: '喝水', next: calcNext('water', 'time'), interval: reminders.water },
+        { icon: '💤', label: '睡眠', next: calcNext('sleep', 'sleep'), interval: reminders.sleep }
+      ];
+      const nowMin = minutesFromTime(new Date().toTimeString().slice(0,5));
+      list.innerHTML = items.map(it => {
+        if (!it.next) return `<div style="display:flex;justify-content:space-between;padding:8px 0;color:var(--text-light);font-size:14px;border-bottom:1px solid var(--border);"><span>${it.icon} ${it.label}</span><span>今天暂无记录</span></div>`;
+        const diff = it.next - nowMin;
+        const isOverdue = diff <= 0;
+        const timeStr = `${String(Math.floor(it.next / 60) % 24).padStart(2,'0')}:${String(it.next % 60).padStart(2,'0')}`;
+        const status = isOverdue ? `已超 ${Math.abs(diff)} 分钟` : `还有 ${diff} 分钟`;
+        return `<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid var(--border);${isOverdue ? 'color:#ff6b6b;' : 'color:var(--text);'}"><span>${it.icon} ${it.label}</span><span>${timeStr} · ${status}</span></div>`;
+      }).join('');
+    }
+
+    const defaultVaccineSchedule = [
+      { name: '乙肝疫苗 第1针', dose: '出生时', months: 0 },
+      { name: '卡介苗', dose: '出生时', months: 0 },
+      { name: '乙肝疫苗 第2针', dose: '1月龄', months: 1 },
+      { name: '脊灰疫苗 第1针', dose: '2月龄', months: 2 },
+      { name: '脊灰疫苗 第2针', dose: '3月龄', months: 3 },
+      { name: '百白破疫苗 第1针', dose: '3月龄', months: 3 },
+      { name: '脊灰疫苗 第3针', dose: '4月龄', months: 4 },
+      { name: '百白破疫苗 第2针', dose: '4月龄', months: 4 },
+      { name: '百白破疫苗 第3针', dose: '5月龄', months: 5 },
+      { name: '乙肝疫苗 第3针', dose: '6月龄', months: 6 },
+      { name: 'A群流脑疫苗 第1针', dose: '6月龄', months: 6 },
+      { name: 'A群流脑疫苗 第2针', dose: '9月龄', months: 9 },
+      { name: '麻腮风疫苗 第1针', dose: '8月龄', months: 8 },
+      { name: '乙脑减毒活疫苗 第1针', dose: '8月龄', months: 8 },
+      { name: '甲肝疫苗', dose: '18月龄', months: 18 },
+      { name: '百白破疫苗 第4针', dose: '18月龄', months: 18 },
+      { name: '麻腮风疫苗 第2针', dose: '18月龄', months: 18 },
+      { name: '乙脑减毒活疫苗 第2针', dose: '2岁', months: 24 },
+      { name: 'A群C群流脑疫苗', dose: '3岁', months: 36 },
+      { name: '脊灰疫苗 第4针', dose: '4岁', months: 48 }
+    ];
+
+    function ensureVaccines() {
+      const d = store.get();
+      if (!d.vaccines || !d.vaccines.length) {
+        const birth = d.baby?.birth;
+        d.vaccines = defaultVaccineSchedule.map((v, i) => ({
+          id: i,
+          name: v.name,
+          dose: v.dose,
+          months: v.months,
+          done: false,
+          date: ''
+        }));
+        store.saveVaccines(d.vaccines);
+      }
+    }
+
+    function renderVaccines() {
+      ensureVaccines();
+      const d = store.get();
+      const baby = d.baby;
+      const months = ageMonths(baby?.birth);
+      const vaccines = d.vaccines || [];
+      const dueSoon = vaccines.filter(v => !v.done && (months !== null && v.months <= months + 1));
+      const summaryEl = document.getElementById('vaccineSummary');
+      const listEl = document.getElementById('vaccineList');
+      const doneCount = vaccines.filter(v => v.done).length;
+      summaryEl.innerHTML = `<p style="font-size:14px;color:var(--text-light);margin:0 0 10px;">已完成 <strong style="color:var(--primary-dark);">${doneCount}</strong> / ${vaccines.length} 针 · 近期应接种 <strong style="color:#ff6b6b;">${dueSoon.length}</strong> 针</p>`;
+      listEl.innerHTML = vaccines.map(v => {
+        const isDue = months !== null && v.months <= months && !v.done;
+        const soon = months !== null && v.months <= months + 1 && v.months > months && !v.done;
+        const statusColor = v.done ? '#4DB6AC' : isDue ? '#ff6b6b' : soon ? '#ff9800' : '#888';
+        const statusText = v.done ? `✓ ${v.date}` : isDue ? '待接种' : soon ? '即将接种' : '未到时间';
+        return `<div class="milestone" style="align-items:flex-start;">
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:500;">${v.name}</div>
+            <div style="font-size:12px;color:var(--text-light);margin-top:2px;">${v.dose} · ${statusText}</div>
+          </div>
+          ${v.done ? `<button class="tag" data-id="${v.id}" data-done="undo" style="background:#fff;color:#ff6b6b;border-color:#ff6b6b;">撤销</button>` : `<button class="tag" data-id="${v.id}" data-done="do" style="background:${statusColor};color:#fff;border-color:${statusColor};">登记</button>`}
+        </div>`;
+      }).join('');
+      listEl.querySelectorAll('button[data-id]').forEach(btn => btn.onclick = () => {
+        const id = Number(btn.dataset.id);
+        const vaccines = store.get().vaccines.map(v => v.id === id ? { ...v, done: btn.dataset.done === 'do', date: btn.dataset.done === 'do' ? todayStr() : '' } : v);
+        store.saveVaccines(vaccines);
+        renderVaccines();
+      });
+    }
+
     function renderTips() {
       const baby = store.get().baby;
       const months = ageMonths(baby?.birth);
@@ -709,11 +888,18 @@
       document.getElementById('settingRecorder').value = getRecorder();
     }
 
+    function updateReminderInputs() {
+      const r = store.get().reminders || { milk: 180, water: 120, sleep: 240 };
+      const milkEl = document.getElementById('reminderMilk');
+      if (milkEl) { milkEl.value = r.milk; document.getElementById('reminderWater').value = r.water; document.getElementById('reminderSleep').value = r.sleep; }
+    }
+
     function init() {
       try {
         document.getElementById('recordDate').value = todayStr();
         renderForm('milk');
         updateBabyInfo();
+        updateReminderInputs();
         renderTodayRecords();
         renderDashboard();
         renderTips();
@@ -730,7 +916,7 @@
         document.getElementById(btn.dataset.page).classList.add('active');
         if (btn.dataset.page === 'page-dashboard') { renderDashboard(); renderGrowthCharts(); }
         if (btn.dataset.page === 'page-tips') renderTips();
-        if (btn.dataset.page === 'page-settings') { updateBabyInfo(); renderTimeline(); }
+        if (btn.dataset.page === 'page-settings') { updateBabyInfo(); updateReminderInputs(); renderTimeline(); }
       });
 
       // Category switching
@@ -761,7 +947,19 @@
       document.getElementById('saveBaby').onclick = () => {
         store.saveBaby({ name: document.getElementById('settingName').value.trim(), birth: document.getElementById('settingBirth').value, gender: document.getElementById('settingGender').value });
         setRecorder(document.getElementById('settingRecorder').value);
-        updateBabyInfo(); renderTips(); showToast('宝宝资料已保存');
+        updateBabyInfo(); renderTips(); renderVaccines(); showToast('宝宝资料已保存');
+      };
+      document.getElementById('saveReminders').onclick = () => {
+        store.saveReminders({
+          milk: Number(document.getElementById('reminderMilk').value) || 180,
+          water: Number(document.getElementById('reminderWater').value) || 120,
+          sleep: Number(document.getElementById('reminderSleep').value) || 240
+        });
+        showToast('提醒设置已保存');
+      };
+      document.getElementById('requestNotify').onclick = () => {
+        if (!('Notification' in window)) { showToast('当前浏览器不支持通知'); return; }
+        Notification.requestPermission().then(p => showToast(p === 'granted' ? '通知已开启' : '通知未授权'));
       };
       document.getElementById('saveSyncCode').onclick = () => {
         const code = document.getElementById('syncCodeInput').value.trim();
@@ -794,7 +992,7 @@
       document.getElementById('importFile').onchange = e => {
         const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = () => { try { store.set(JSON.parse(reader.result)); updateBabyInfo(); renderTodayRecords(); renderDashboard(); renderTips(); renderTimeline(); showToast('导入成功'); } catch { showToast('导入失败'); } };
+        reader.onload = () => { try { store.set(JSON.parse(reader.result)); updateBabyInfo(); renderTodayRecords(); renderDashboard(); renderTips(); renderTimeline(); renderVaccines(); showToast('导入成功'); } catch { showToast('导入失败'); } };
         reader.readAsText(file);
       };
       document.getElementById('clearData').onclick = () => { if (confirm('确定清空所有数据？此操作不可恢复')) { localStorage.removeItem('babyTrackerData'); location.reload(); } };
@@ -835,6 +1033,9 @@
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden && fbSyncEnabled && fbUid) { loadFromCloud(); }
       });
+
+      // Update reminder countdown every minute
+      setInterval(() => { renderReminders(); checkNotifications(); }, 60000);
 
       window.addEventListener('resize', renderGrowthCharts);
     }
