@@ -9,9 +9,27 @@
   <title>宝宝成长记</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="vendor/firebase-app-compat.js"></script>
+  <script src="vendor/firebase-auth-compat.js"></script>
+  <script src="vendor/firebase-database-compat.js"></script>
+  <script>
+    // Fallback to CDN if local Firebase scripts failed to load
+    (function() {
+      if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function' || typeof firebase.database !== 'function') {
+        const scripts = [
+          'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',
+          'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js',
+          'https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js'
+        ];
+        scripts.forEach(src => {
+          const s = document.createElement('script');
+          s.src = src;
+          s.async = false;
+          document.head.appendChild(s);
+        });
+      }
+    })();
+  </script>
   <style>
     :root {
       --primary: #FF8FB1;
@@ -221,6 +239,7 @@
         <input type="text" id="syncCodeInput" placeholder="例如：mamababa2026" style="margin-bottom:8px;">
         <button class="btn btn-secondary" id="saveSyncCode">保存同步码</button>
       </div>
+      <button class="btn btn-secondary" style="margin-top:10px;" id="retrySync">重新连接同步</button>
       <p style="font-size:13px;color:var(--text-light);margin:12px 0 0;line-height:1.5;">
         在两台设备输入同一个同步码，数据就会实时共享。不填则只保存在当前设备。<br>
         当前使用匿名登录验证，云端数据通过同步码隔离。
@@ -328,8 +347,8 @@
     }
 
     function syncStatusText() {
-      if (!fbSyncEnabled) return '未启用';
-      if (!fbUid) return '连接中…';
+      if (!fbSyncEnabled) return '未启用（脚本未加载）';
+      if (!fbUid) return '登录中…';
       if (!fbListenerSet) return '连接中…';
       return getSyncCode() ? '已同步（码：' + getSyncCode() + '）' : '已同步（本设备）';
     }
@@ -750,6 +769,15 @@
         restartSyncWithCode(code);
         showToast('同步码已保存，开始同步');
       };
+      document.getElementById('retrySync').onclick = () => {
+        if (typeof firebase !== 'object' || typeof firebase.auth !== 'function') {
+          showToast('同步脚本未加载，请先刷新页面'); return;
+        }
+        fbSyncEnabled = true;
+        firebase.auth().signInAnonymously()
+          .then(cred => { fbUid = cred.user.uid; updateSyncUI(); loadFromCloud(); showToast('同步已连接'); })
+          .catch(err => { console.error('Manual auth failed', err); fbSyncEnabled = false; updateSyncUI(); showToast('连接失败：' + err.message); });
+      };
       document.getElementById('syncCodeInput').value = getSyncCode() || '';
       document.getElementById('syncBtn').onclick = () => {
         const icon = document.getElementById('syncIcon');
@@ -788,6 +816,17 @@
         fbSyncEnabled = false;
         updateSyncUI();
       }
+
+      // Retry if Firebase scripts load late (e.g. from CDN fallback)
+      setTimeout(() => {
+        if (typeof firebase === 'object' && typeof firebase.auth === 'function' && !fbUid) {
+          fbSyncEnabled = true;
+          updateSyncUI();
+          firebase.auth().signInAnonymously()
+            .then(cred => { fbUid = cred.user.uid; updateSyncUI(); loadFromCloud(); })
+            .catch(err => { console.error('Late auth failed', err); fbSyncEnabled = false; updateSyncUI(); });
+        }
+      }, 2500);
 
       // Pull-to-refresh on record page
       setupPullToRefresh();

@@ -4,7 +4,10 @@ const ASSETS = [
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './vendor/firebase-app-compat.js',
+  './vendor/firebase-auth-compat.js',
+  './vendor/firebase-database-compat.js'
 ];
 
 self.addEventListener('install', event => {
