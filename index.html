@@ -50,9 +50,14 @@
     .quick-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .tag { padding: 8px 14px; border-radius: 20px; background: var(--bg); border: 1.5px solid var(--border); font-size: 13px; color: var(--text); cursor: pointer; transition: all 0.15s; }
     .tag.selected { background: var(--primary); color: white; border-color: var(--primary); }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 14px; border: none; border-radius: 14px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 143, 177, 0.35); transition: transform 0.15s, box-shadow 0.15s; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 14px; border: none; border-radius: 14px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 143, 177, 0.35); transition: transform 0.15s, box-shadow 0.15s; min-height: 44px; }
     .btn:active { transform: scale(0.98); box-shadow: 0 2px 8px rgba(255, 143, 177, 0.3); }
     .btn-secondary { background: #fff; color: var(--primary-dark); border: 1.5px solid var(--primary); box-shadow: none; }
+    .tab-btn { min-height: 54px; }
+    .segmented button { min-height: 40px; }
+    .tag { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+    .record-item .delete { padding: 8px; margin: -4px; }
+    .milestone .check { width: 28px; height: 28px; min-width: 28px; min-height: 28px; }
     .records-list { display: flex; flex-direction: column; gap: 10px; }
     .record-item { background: var(--bg); border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
     .record-item .time { font-size: 13px; color: var(--text-light); min-width: 46px; }
@@ -234,6 +239,7 @@
       <button class="btn btn-secondary" style="margin-top:10px;" id="importDataBtn">导入备份</button>
       <input type="file" id="importFile" accept="application/json" class="hidden">
       <button class="btn btn-secondary" style="margin-top:10px;color:#ff6b6b;border-color:#ff6b6b;" id="clearData">清空所有数据</button>
+      <button class="btn btn-secondary" style="margin-top:10px;" id="clearCache">刷新缓存并重新加载</button>
     </div>
     <div class="card">
       <h2 class="card-title">📊 本月时间线</h2>
@@ -249,6 +255,7 @@
   </nav>
 
   <div class="toast" id="toast"></div>
+  <div id="errorBox" style="display:none;position:fixed;top:0;left:0;right:0;background:#ff6b6b;color:#fff;padding:12px 16px;z-index:999;font-size:14px;line-height:1.5;"></div>
 
   <script>
     // ================= Data Store =================
@@ -258,8 +265,14 @@
 
     const store = {
       get() {
-        const raw = localStorage.getItem('babyTrackerData');
-        return raw ? JSON.parse(raw) : { baby: null, records: [], growth: [], extras: [], lastUpdated: 0 };
+        try {
+          const raw = localStorage.getItem('babyTrackerData');
+          return raw ? JSON.parse(raw) : { baby: null, records: [], growth: [], extras: [], lastUpdated: 0 };
+        } catch (e) {
+          console.error('Failed to load local data', e);
+          showError('本地数据读取失败，已使用默认数据。如已有备份，可在设置页导入恢复。');
+          return { baby: null, records: [], growth: [], extras: [], lastUpdated: 0 };
+        }
       },
       set(data, { skipSync = false } = {}) {
         data.lastUpdated = Date.now();
@@ -403,6 +416,7 @@
     function todayStr() { return formatDate(new Date()); }
     function minutesFromTime(t) { if (!t) return 0; const [h, m] = t.split(':'); return (Number(h) || 0) * 60 + (Number(m) || 0); }
     function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+    function showError(msg) { const box = document.getElementById('errorBox'); if (!box) return; box.textContent = msg; box.style.display = 'block'; }
     function ageMonths(birth) {
       if (!birth) return null;
       const b = new Date(birth + 'T00:00:00'), now = new Date();
@@ -542,6 +556,7 @@
       const ctx = canvas.getContext('2d');
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
       canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
       ctx.scale(dpr, dpr);
       const w = rect.width, h = rect.height;
@@ -658,13 +673,18 @@
     }
 
     function init() {
-      document.getElementById('recordDate').value = todayStr();
-      renderForm('milk');
-      updateBabyInfo();
-      renderTodayRecords();
-      renderDashboard();
-      renderTips();
-      renderTimeline();
+      try {
+        document.getElementById('recordDate').value = todayStr();
+        renderForm('milk');
+        updateBabyInfo();
+        renderTodayRecords();
+        renderDashboard();
+        renderTips();
+        renderTimeline();
+      } catch (e) {
+        console.error('Init render failed', e);
+        showError('页面初始化渲染失败：' + e.message + '。底部菜单仍可点击，请尝试刷新或清除缓存。');
+      }
 
       // Tab switching
       document.querySelectorAll('.tab-btn').forEach(btn => btn.onclick = () => {
@@ -732,12 +752,22 @@
         reader.readAsText(file);
       };
       document.getElementById('clearData').onclick = () => { if (confirm('确定清空所有数据？此操作不可恢复')) { localStorage.removeItem('babyTrackerData'); location.reload(); } };
+      document.getElementById('clearCache').onclick = async () => {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+          const caches = window.caches ? await window.caches.keys() : [];
+          await Promise.all(caches.map(name => window.caches.delete(name)));
+        }
+        location.reload(true);
+      };
 
-      if (fbSyncEnabled) {
+      if (fbSyncEnabled && typeof firebase.auth === 'function') {
         firebase.auth().signInAnonymously()
           .then(cred => { fbUid = cred.user.uid; updateSyncUI(); loadFromCloud(); })
           .catch(err => { console.error('Auth failed', err); fbSyncEnabled = false; updateSyncUI(); });
       } else {
+        fbSyncEnabled = false;
         updateSyncUI();
       }
 
@@ -773,9 +803,10 @@
         const x = e.touches[0].clientX;
         const dy = y - startY;
         const dx = Math.abs(x - startX);
-        if (dy > 0 && dy > dx) {
+        if (dx > dy && dx > 10) { pulling = false; return; }
+        if (dy > 10 && dy > dx) {
           e.preventDefault();
-          const h = Math.min(dy * 0.5, threshold + 20);
+          const h = Math.min((dy - 10) * 0.5, threshold + 20);
           indicator.style.height = h + 'px';
           indicator.textContent = h > threshold ? '松开同步' : '下拉同步';
         }
@@ -792,6 +823,9 @@
         }
       });
     }
+
+    window.onerror = function(msg, url, line) { showError('脚本运行错误：' + msg + '（第' + line + '行）'); return false; };
+    window.addEventListener('error', e => { showError('资源加载错误：' + e.message); });
 
     init();
 
