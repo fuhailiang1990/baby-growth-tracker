@@ -17,3 +17,6 @@ yarn.lock
 # Android build
 android-sdk/
 android-twa/
+
+# Screenshots
+screenshot_*.png
