@@ -263,15 +263,26 @@
     function getRecorder() { return localStorage.getItem(recorderKey)?.trim() || '我'; }
     function setRecorder(name) { localStorage.setItem(recorderKey, name.trim() || '我'); }
 
+    function normalizeData(data) {
+      if (!data || typeof data !== 'object') data = {};
+      return {
+        baby: data.baby || null,
+        records: Array.isArray(data.records) ? data.records : [],
+        growth: Array.isArray(data.growth) ? data.growth : [],
+        extras: Array.isArray(data.extras) ? data.extras : [],
+        lastUpdated: data.lastUpdated || 0
+      };
+    }
+
     const store = {
       get() {
         try {
           const raw = localStorage.getItem('babyTrackerData');
-          return raw ? JSON.parse(raw) : { baby: null, records: [], growth: [], extras: [], lastUpdated: 0 };
+          return normalizeData(raw ? JSON.parse(raw) : null);
         } catch (e) {
           console.error('Failed to load local data', e);
           showError('本地数据读取失败，已使用默认数据。如已有备份，可在设置页导入恢复。');
-          return { baby: null, records: [], growth: [], extras: [], lastUpdated: 0 };
+          return normalizeData(null);
         }
       },
       set(data, { skipSync = false } = {}) {
@@ -329,16 +340,22 @@
     }
 
     function mergeData(local, cloud) {
-      if (!cloud) return local;
-      // 以时间戳为基准：云端更新就用云端全量数据
-      if ((cloud.lastUpdated || 0) > (local.lastUpdated || 0)) return cloud;
+      local = normalizeData(local);
+      cloud = normalizeData(cloud);
+      // 以时间戳为基准：云端更新就用云端数据并补齐字段
+      if ((cloud.lastUpdated || 0) > (local.lastUpdated || 0)) {
+        cloud.records = cloud.records.length ? cloud.records : local.records;
+        cloud.growth = cloud.growth.length ? cloud.growth : local.growth;
+        cloud.extras = cloud.extras.length ? cloud.extras : local.extras;
+        return cloud;
+      }
       // 本地更新时，也合并云端可能有的、本地没有的新记录（按 id 去重）
       const localIds = new Set(local.records.map(r => r.id));
       const growthIds = new Set(local.growth.map(g => g.id));
       const extraIds = new Set(local.extras.map(e => e.id));
-      cloud.records?.forEach(r => { if (!localIds.has(r.id)) local.records.push(r); });
-      cloud.growth?.forEach(g => { if (!growthIds.has(g.id)) local.growth.push(g); });
-      cloud.extras?.forEach(e => { if (!extraIds.has(e.id)) local.extras.push(e); });
+      cloud.records.forEach(r => { if (!localIds.has(r.id)) local.records.push(r); });
+      cloud.growth.forEach(g => { if (!growthIds.has(g.id)) local.growth.push(g); });
+      cloud.extras.forEach(e => { if (!extraIds.has(e.id)) local.extras.push(e); });
       return local;
     }
 
@@ -381,7 +398,8 @@
         const local = store.get();
         // 云端数据更新才覆盖本地，避免本地刚写入时的回环覆盖
         if ((cloud.lastUpdated || 0) > (local.lastUpdated || 0)) {
-          localStorage.setItem('babyTrackerData', JSON.stringify(cloud));
+          const merged = mergeData(local, cloud);
+          store.set(merged, { skipSync: true });
           renderAll();
         }
         updateSyncUI();
@@ -510,7 +528,7 @@
 
     function renderTodayRecords() {
       const date = document.getElementById('recordDate').value || todayStr();
-      const records = store.get().records.filter(r => r.date === date).sort((a, b) => minutesFromTime(a.time) - minutesFromTime(b.time));
+      const records = (store.get().records || []).filter(r => r.date === date).sort((a, b) => minutesFromTime(a.time) - minutesFromTime(b.time));
       const list = document.getElementById('todayRecords');
       if (!records.length) { list.innerHTML = '<div class="empty-tip">今天还没有记录，开始第一条吧~</div>'; return; }
       list.innerHTML = records.map(r => {
@@ -545,7 +563,7 @@
     }
 
     function renderGrowthCharts() {
-      const growth = store.get().growth.sort((a, b) => new Date(a.date) - new Date(b.date));
+      const growth = (store.get().growth || []).sort((a, b) => new Date(a.date) - new Date(b.date));
       drawLineChart('weightChart', growth.map(g => g.date), growth.map(g => g.weight), '体重 (kg)', '#F06292');
       drawLineChart('heightChart', growth.map(g => g.date), growth.map(g => g.height), '身高 (cm)', '#4DB6AC');
     }
@@ -595,7 +613,7 @@
     }
 
     function renderExtras() {
-      const extras = store.get().extras.slice().sort((a, b) => b.id - a.id);
+      const extras = (store.get().extras || []).slice().sort((a, b) => b.id - a.id);
       const list = document.getElementById('extraList');
       if (!extras.length) { list.innerHTML = '<div class="empty-tip">还没有记录，快记下宝宝的第一次吧~</div>'; return; }
       const labels = { skill: '新技能', emotion: '情绪', exercise: '运动', supplement: '补剂' };
@@ -654,7 +672,7 @@
     }
 
     function renderTimeline() {
-      const all = [...store.get().records, ...store.get().extras.map(e => ({ ...e, category: e.type, time: '' }))].sort((a, b) => b.created - a.created).slice(0, 30);
+      const all = [...(store.get().records || []), ...(store.get().extras || []).map(e => ({ ...e, category: e.type, time: '' }))].sort((a, b) => b.created - a.created).slice(0, 30);
       const list = document.getElementById('monthTimeline');
       if (!all.length) { list.innerHTML = '<div class="empty-tip">还没有记录~</div>'; return; }
       list.innerHTML = all.map(r => {
