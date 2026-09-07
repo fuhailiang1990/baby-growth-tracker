@@ -169,6 +169,8 @@
     .lb-next { right: 10px; }
     .lb-info { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: #fff; font-size: 14px; padding: 0 20px; line-height: 1.6; }
     .lb-info .lb-del { margin-top: 8px; background: none; border: 1px solid rgba(255,255,255,0.4); color: #fff; border-radius: 16px; padding: 5px 14px; font-size: 12px; cursor: pointer; }
+    .progress-track { height: 8px; background: var(--bg); border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+    .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 6px; transition: width 0.3s ease; }
     @media (max-width: 767px) {
       .sub-nav-bar { display: flex; }
     }
@@ -273,24 +275,48 @@
       <div id="vaccineList"></div>
     </div>
 
-    <div class="card" id="sec-extras">
-      <h2 class="card-title">🌟 技能 & 情绪 & 运动</h2>
+    <div class="card" id="sec-skills">
+      <h2 class="card-title">🌟 新技能 / 里程碑</h2>
       <div class="form-row">
-        <label>类型</label>
-        <select id="extraType">
-          <option value="skill">新技能 / 里程碑</option>
-          <option value="emotion">情绪记录</option>
-          <option value="exercise">运动 / 户外活动</option>
-          <option value="supplement">补剂 / 维生素</option>
-        </select>
+        <label>记录新技能</label>
+        <input type="text" id="skillText" placeholder="例如：第一次翻身、笑出声、抓握摇铃">
+        <div class="quick-tags" id="skillTags"></div>
       </div>
+      <button class="btn btn-secondary" id="saveSkill">保存技能</button>
+      <div class="milestone-list" id="skillList" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card" id="sec-emotions">
+      <h2 class="card-title">😊 情绪记录</h2>
       <div class="form-row">
-        <label>内容</label>
-        <input type="text" id="extraText" placeholder="例如：第一次翻身、今天很开心、户外活动30分钟、D3 1滴">
-        <div class="quick-tags" id="extraTags"></div>
+        <label>宝宝今天的情绪</label>
+        <input type="text" id="emotionText" placeholder="例如：开心、认生、烦躁">
+        <div class="quick-tags" id="emotionTags"></div>
       </div>
-      <button class="btn btn-secondary" id="saveExtra">保存</button>
-      <div class="milestone-list" id="extraList" style="margin-top:14px;"></div>
+      <button class="btn btn-secondary" id="saveEmotion">保存情绪</button>
+      <div class="milestone-list" id="emotionList" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card" id="sec-exercise">
+      <h2 class="card-title">🏃 运动 / 户外</h2>
+      <div class="form-row">
+        <label>运动内容</label>
+        <input type="text" id="exerciseText" placeholder="例如：Tummy Time 10分钟、户外散步">
+        <div class="quick-tags" id="exerciseTags"></div>
+      </div>
+      <button class="btn btn-secondary" id="saveExercise">保存运动</button>
+      <div class="milestone-list" id="exerciseList" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card" id="sec-supplement">
+      <h2 class="card-title">💊 补剂 / 维生素</h2>
+      <div class="form-row">
+        <label>补充内容</label>
+        <input type="text" id="supplementText" placeholder="例如：维生素D3 1滴">
+        <div class="quick-tags" id="supplementTags"></div>
+      </div>
+      <button class="btn btn-secondary" id="saveSupplement">保存补剂</button>
+      <div class="milestone-list" id="supplementList" style="margin-top:14px;"></div>
     </div>
   </section>
 
@@ -319,10 +345,21 @@
         <input type="text" id="mediaCaption" placeholder="例如：第一次翻身、百天照、游泳">
       </div>
       <button class="btn" id="pickMediaBtn">📷 选择照片或视频</button>
-      <div id="uploadProgress" style="display:none;margin-top:12px;font-size:13px;color:var(--text-light);"></div>
+      <div id="uploadProgress" style="display:none;margin-top:12px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-light);margin-bottom:5px;">
+          <span id="uploadProgressText">准备中…</span><span id="uploadProgressPct">0%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="uploadProgressFill"></div></div>
+      </div>
     </div>
     <div class="card" id="sec-album-gallery">
       <h2 class="card-title">🖼 相册墙</h2>
+      <div id="cloudSyncBar" style="display:none;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--primary-dark);margin-bottom:5px;">
+          <span id="cloudSyncLabel">☁️ 云端同步中</span><span id="cloudSyncText">0/0</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="cloudSyncFill"></div></div>
+      </div>
       <div class="segmented" id="albumFilter" style="margin-bottom:12px;">
         <button class="active" data-filter="all">全部</button>
         <button data-filter="image">📷 照片</button>
@@ -347,12 +384,19 @@
 
     <div class="card" id="sec-baby">
       <h2 class="card-title">👶 宝宝资料</h2>
-      <div class="baby-form">
-      <div class="form-row"><label>记录人昵称</label><input type="text" id="settingRecorder" placeholder="例如：妈妈、爸爸"></div>
+      <div class="baby-form"
+      <div class="form-row"><label>记录人昵称</label>
+        <input type="text" id="settingRecorder" placeholder="点选下方常用称呼，或自定义输入">
+        <div class="quick-tags" id="recorderChips"></div>
+      </div>
         <div class="form-row"><label>昵称</label><input type="text" id="settingName" placeholder="宝宝昵称"></div>
         <div class="form-row"><label>出生日期</label><input type="date" id="settingBirth"></div>
         <div class="form-row"><label>性别</label>
-          <select id="settingGender"><option value="boy">男宝</option><option value="girl">女宝</option><option value="unknown">保密</option></select>
+          <div class="segmented" id="genderSeg">
+            <button data-g="boy" style="min-width:33%;">👦 男宝</button>
+            <button data-g="girl" style="min-width:33%;">👧 女宝</button>
+            <button data-g="unknown" style="min-width:33%;">🤫 保密</button>
+          </div>
         </div>
         <button class="btn" id="saveBaby">保存资料</button>
       </div>
@@ -747,7 +791,7 @@
       document.getElementById('statWater').textContent = recs.filter(r => r.category === 'water').reduce((s, r) => s + Number(r.amount || 0), 0);
       document.getElementById('statSleep').textContent = recs.filter(r => r.category === 'sleep').reduce((s, r) => s + sleepMinutes(r.start, r.end), 0);
       renderGrowthCharts();
-      renderExtras();
+      renderExtraSections();
       renderReminders();
       renderVaccines();
     }
@@ -785,38 +829,58 @@
     const extraTagMap = {
       skill: ['第一次抬头', '抬头稳', '第一次翻身', '第一次独坐', '第一次爬行', '第一次扶站', '第一次叫妈妈', '第一次叫爸爸', '笑出声', '抓握摇铃', '模仿声音', '拍手', '挥手再见', '指物'],
       emotion: ['开心', '平静', '哭闹', '烦躁', '认生', '好奇', '专注'],
-      exercise: ['Tummy Time', '翻身', '爬行', '扶站', '独站', '户外散步', '游泳'],
-      supplement: ['维生素D3', '维生素AD', '钙', '益生菌', 'DHA', '铁剂']
+      exercise: ['Tummy Time', '翻身练习', '抓握练习', '户外散步', '游泳', '健身架踢腿'],
+      supplement: ['维生素D3 1滴', '维生素AD 1粒', '钙', '益生菌', 'DHA', '铁剂']
     };
+    const EXTRA_SECTIONS = [
+      { type: 'skill', tagsId: 'skillTags', inputId: 'skillText', listId: 'skillList', btnId: 'saveSkill', emptyTip: '还没有记录技能，点上方标签快速记录宝宝的第一次吧~' },
+      { type: 'emotion', tagsId: 'emotionTags', inputId: 'emotionText', listId: 'emotionList', btnId: 'saveEmotion', emptyTip: '还没有情绪记录~' },
+      { type: 'exercise', tagsId: 'exerciseTags', inputId: 'exerciseText', listId: 'exerciseList', btnId: 'saveExercise', emptyTip: '还没有运动记录~' },
+      { type: 'supplement', tagsId: 'supplementTags', inputId: 'supplementText', listId: 'supplementList', btnId: 'saveSupplement', emptyTip: '还没有补剂记录~' }
+    ];
 
-    function renderExtraTags() {
-      const type = document.getElementById('extraType').value;
-      const tags = extraTagMap[type] || [];
-      document.getElementById('extraTags').innerHTML = tags.map(t => `<span class="tag">${t}</span>`).join('');
-      document.getElementById('extraTags').querySelectorAll('.tag').forEach(tag => tag.onclick = () => {
-        const input = document.getElementById('extraText');
-        const val = tag.textContent;
-        input.value = input.value ? (input.value + '、' + val) : val;
-        tag.classList.add('selected');
-        setTimeout(() => tag.classList.remove('selected'), 200);
-      });
+    function bindExtraSection(sec) {
+      const tagsBox = document.getElementById(sec.tagsId);
+      const input = document.getElementById(sec.inputId);
+      if (tagsBox) {
+        tagsBox.innerHTML = (extraTagMap[sec.type] || []).map(t => `<span class="tag">${t}</span>`).join('');
+        tagsBox.querySelectorAll('.tag').forEach(tag => tag.onclick = () => {
+          const val = tag.textContent;
+          input.value = input.value ? (input.value + '、' + val) : val;
+          tag.classList.add('selected');
+          setTimeout(() => tag.classList.remove('selected'), 200);
+        });
+      }
+      const btn = document.getElementById(sec.btnId);
+      if (btn) btn.onclick = () => {
+        const text = input.value.trim();
+        if (!text) { showToast('请填写内容'); return; }
+        store.addExtra({ type: sec.type, text, date: todayStr(), created: Date.now() });
+        input.value = '';
+        showToast('已保存');
+        renderExtraSections();
+        renderTimeline();
+        renderMilestoneRef();
+      };
     }
 
-    function renderExtras() {
-      const extras = (store.get().extras || []).slice().sort((a, b) => b.id - a.id);
-      const list = document.getElementById('extraList');
-      if (!extras.length) { list.innerHTML = '<div class="empty-tip">还没有记录，快记下宝宝的第一次吧~</div>'; return; }
-      const labels = { skill: '新技能', emotion: '情绪', exercise: '运动', supplement: '补剂' };
-      list.innerHTML = extras.map(e => `<div class="milestone">
-        <div class="check" data-id="${e.id}">✓</div>
-        <div style="flex:1;">
-          <div style="font-size:12px;color:var(--text-light);">${e.date} · ${labels[e.type] || '其他'}</div>
-          <div style="font-size:14px;margin-top:2px;">${e.text}</div>
-        </div>
-        <span class="delete" data-id="${e.id}">🗑</span>
-      </div>`).join('');
-      list.querySelectorAll('.milestone .check').forEach(c => c.onclick = function() { this.parentElement.classList.toggle('done'); });
-      list.querySelectorAll('.delete').forEach(btn => btn.onclick = () => { store.delExtra(Number(btn.dataset.id)); renderExtras(); });
+    function renderExtraSections() {
+      for (const sec of EXTRA_SECTIONS) {
+        const list = document.getElementById(sec.listId);
+        if (!list) continue;
+        const extras = (store.get().extras || []).filter(e => e.type === sec.type).sort((a, b) => b.id - a.id).slice(0, 20);
+        if (!extras.length) { list.innerHTML = `<div class="empty-tip">${sec.emptyTip}</div>`; continue; }
+        list.innerHTML = extras.map(e => `<div class="milestone">
+          <div class="check" data-id="${e.id}">✓</div>
+          <div style="flex:1;">
+            <div style="font-size:12px;color:var(--text-light);">${e.date}${e.recordedBy ? ' · @' + e.recordedBy : ''}</div>
+            <div style="font-size:14px;margin-top:2px;">${e.text}</div>
+          </div>
+          <span class="delete" data-id="${e.id}">🗑</span>
+        </div>`).join('');
+        list.querySelectorAll('.milestone .check').forEach(c => c.onclick = function() { this.parentElement.classList.toggle('done'); });
+        list.querySelectorAll('.delete').forEach(btn => btn.onclick = () => { store.delExtra(Number(btn.dataset.id)); renderExtraSections(); renderTimeline(); renderMilestoneRef(); });
+      }
     }
 
     let notifiedKeys = new Set();
@@ -1065,8 +1129,40 @@
       if (sideName) sideName.textContent = baby?.name || '设置宝宝';
       if (sideAge) sideAge.textContent = ageText(baby?.birth);
       document.getElementById('recorderTag').textContent = '👤 ' + getRecorder();
-      if (baby) { document.getElementById('settingName').value = baby.name || ''; document.getElementById('settingBirth').value = baby.birth || ''; document.getElementById('settingGender').value = baby.gender || 'unknown'; }
+      if (baby) {
+        document.getElementById('settingName').value = baby.name || '';
+        document.getElementById('settingBirth').value = baby.birth || '';
+        syncGenderButtons(baby.gender || 'unknown');
+      }
       document.getElementById('settingRecorder').value = getRecorder();
+    }
+
+    // 性别按钮组：读取当前选中 / 恢复选中态
+    function currentGender() {
+      return document.querySelector('#genderSeg button.active')?.dataset.g || 'unknown';
+    }
+    function syncGenderButtons(g) {
+      document.querySelectorAll('#genderSeg button').forEach(b => b.classList.toggle('active', b.dataset.g === g));
+    }
+
+    function bindBabyProfileOptions() {
+      // 记录人常用称呼
+      const chips = ['妈妈', '爸爸', '奶奶', '爷爷', '姥姥', '姥爷', '阿姨'];
+      const box = document.getElementById('recorderChips');
+      if (box) {
+        box.innerHTML = chips.map(c => `<span class="tag">${c}</span>`).join('');
+        box.querySelectorAll('.tag').forEach(tag => tag.onclick = () => {
+          document.getElementById('settingRecorder').value = tag.textContent;
+          tag.classList.add('selected');
+          setTimeout(() => tag.classList.remove('selected'), 200);
+        });
+      }
+      // 性别三选一
+      document.querySelectorAll('#genderSeg button').forEach(btn => btn.onclick = () => {
+        document.querySelectorAll('#genderSeg button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      syncGenderButtons('unknown');
     }
 
     function updateReminderInputs() {
@@ -1126,31 +1222,87 @@
       if (!fbSyncEnabled || !fbUid || typeof firebase !== 'object') return null;
       return firebase.database().ref('users/' + (getSyncCode() || fbUid) + '/media');
     }
+
+    // ===== 进度条 =====
+    function setProgressUI(prefix, label, done, total) {
+      const bar = document.getElementById(prefix + 'Bar');
+      if (!bar) return;
+      if (!total || done >= total) { bar.style.display = 'none'; return; }
+      bar.style.display = 'block';
+      document.getElementById(prefix + 'Label').textContent = label;
+      document.getElementById(prefix + 'Text').textContent = done + '/' + total;
+      document.getElementById(prefix + 'Fill').style.width = Math.round(done / total * 100) + '%';
+      if (prefix === 'uploadProgress') document.getElementById('uploadProgressPct').textContent = Math.round(done / total * 100) + '%';
+    }
+    const setCloudSyncProgress = (label, done, total) => setProgressUI('cloudSync', label, done, total);
+    const setUploadProgress = (done, total, name, hideOnDone = true) => {
+      const bar = document.getElementById('uploadProgress');
+      if (!total || (hideOnDone && done >= total)) { if (bar) bar.style.display = 'none'; return; }
+      bar.style.display = 'block';
+      document.getElementById('uploadProgressText').textContent = `正在保存 ${done}/${total}${name ? '：' + name : ''}`;
+      const pct = Math.round(done / total * 100) + '%';
+      document.getElementById('uploadProgressPct').textContent = pct;
+      document.getElementById('uploadProgressFill').style.width = pct;
+    };
+
+    // ===== 云端上传（照片）+ 进度 =====
+    let cloudUpDone = 0, cloudUpTotal = 0;
     function uploadMediaToCloud(item, dataUrl) {
       const ref = cloudMediaRef();
       if (!ref || item.type !== 'image' || !dataUrl) return;
-      ref.child(String(item.id)).set(dataUrl).catch(err => console.error('Media cloud upload failed', err));
+      cloudUpTotal++;
+      setCloudSyncProgress('☁️ 正在上传照片', cloudUpDone, cloudUpTotal);
+      ref.child(String(item.id)).set(dataUrl)
+        .catch(err => console.error('Media cloud upload failed', err))
+        .finally(() => {
+          cloudUpDone++;
+          setCloudSyncProgress('☁️ 正在上传照片', cloudUpDone, cloudUpTotal);
+          if (cloudUpDone >= cloudUpTotal) { cloudUpDone = 0; cloudUpTotal = 0; }
+        });
     }
     function deleteMediaFromCloud(id) {
       const ref = cloudMediaRef();
       if (ref) ref.child(String(id)).remove().catch(() => {});
     }
-    // 其他设备拉取云端照片到本地 IndexedDB
+
+    // ===== 从云端批量拉取照片（一次读取 + 并发写入，取代逐张请求） =====
+    let hydrateRunning = false;
     async function hydrateMediaFromCloud() {
       const ref = cloudMediaRef();
-      if (!ref) return;
+      if (!ref || hydrateRunning) return;
       const metas = (store.get().media || []).filter(m => m.type === 'image');
-      for (const m of metas) {
-        if (await idbGet(m.id)) continue;
-        try {
-          const snap = await ref.child(String(m.id)).once('value');
-          const dataUrl = snap.val();
-          if (dataUrl && typeof dataUrl === 'string') {
-            await idbPut(m.id, await (await fetch(dataUrl)).blob());
-          }
-        } catch (e) { /* 忽略单个失败 */ }
+      if (!metas.length) return;
+      hydrateRunning = true;
+      try {
+        // 并发检查本地已有哪些（每批 8 个）
+        const missing = [];
+        for (let i = 0; i < metas.length; i += 8) {
+          await Promise.all(metas.slice(i, i + 8).map(async m => {
+            if (!(await idbGet(m.id).catch(() => null))) missing.push(m);
+          }));
+        }
+        if (!missing.length) return;
+        setCloudSyncProgress('⬇️ 正在下载云端照片', 0, missing.length);
+        const snap = await ref.once('value'); // 一次请求拿全部，不再逐张请求
+        const all = snap.val() || {};
+        let done = 0;
+        for (let i = 0; i < missing.length; i += 8) {
+          await Promise.all(missing.slice(i, i + 8).map(async m => {
+            const d = all[m.id];
+            if (d && typeof d === 'string') {
+              try { await idbPut(m.id, await (await fetch(d)).blob()); } catch (e) {}
+            }
+            done++;
+          }));
+          setCloudSyncProgress('⬇️ 正在下载云端照片', done, missing.length);
+        }
+        if (currentPage === 'page-album') renderAlbum();
+      } catch (e) {
+        console.error('Hydrate media failed', e);
+      } finally {
+        hydrateRunning = false;
+        setCloudSyncProgress('', 1, 1); // 隐藏
       }
-      if (currentPage === 'page-album') renderAlbum();
     }
 
     // 图片压缩：最长边 1280px，JPEG 0.82
@@ -1189,17 +1341,19 @@
       stats.textContent = total ? `共 ${total} 个瞬间（照片 ${(store.get().media || []).filter(m => m.type === 'image').length} · 视频 ${(store.get().media || []).filter(m => m.type === 'video').length}）` : '';
       if (!items.length) { grid.innerHTML = '<div class="empty-tip" style="grid-column:1/-1;">相册还是空的，点击上方「选择照片或视频」记录宝宝的第一个瞬间吧~</div>'; return; }
 
+      // 并发读取本地缩略图，避免串行等待
+      const blobs = await Promise.all(items.map(m => idbGet(m.id).catch(() => null)));
       let html = '', lastMonth = '';
-      for (const m of items) {
+      items.forEach((m, idx) => {
         const month = (m.date || '').slice(0, 7);
         if (month && month !== lastMonth) {
           lastMonth = month;
           html += `<div class="album-month-title">📅 ${month.replace('-', ' 年 ')} 月</div>`;
         }
-        const blob = await idbGet(m.id);
+        const blob = blobs[idx];
         if (!blob) {
           html += `<div class="album-item" data-id="${m.id}" style="display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:12px;">${m.type === 'video' ? '🎬 本机视频' : '☁️ 同步中…'}</div>`;
-          continue;
+          return;
         }
         const url = mediaObjectUrl(blob);
         if (m.type === 'video') {
@@ -1213,7 +1367,7 @@
             ${m.caption ? `<div class="cap">${m.caption}</div>` : ''}
             <button class="del" data-id="${m.id}">🗑</button></div>`;
         }
-      }
+      });
       grid.innerHTML = html;
       grid.querySelectorAll('.album-item').forEach(el => el.onclick = e => {
         if (e.target.classList.contains('del')) return;
@@ -1279,17 +1433,16 @@
       const files = Array.from(fileList || []);
       if (!files.length) return;
       const caption = document.getElementById('mediaCaption').value.trim();
-      const progress = document.getElementById('uploadProgress');
-      progress.style.display = 'block';
       let ok = 0;
+      setUploadProgress(0, files.length, files[0].name);
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        progress.textContent = `正在保存 ${i + 1} / ${files.length}：${file.name}`;
+        document.getElementById('uploadProgressText').textContent = `正在保存 ${i + 1}/${files.length}：${file.name}`;
         try {
           const isImage = file.type.startsWith('image/');
           const isVideo = file.type.startsWith('video/');
-          if (!isImage && !isVideo) continue;
-          if (isVideo && file.size > 80 * 1024 * 1024) { showToast('视频超过 80MB，未保存：' + file.name); continue; }
+          if (!isImage && !isVideo) { setUploadProgress(i + 1, files.length); continue; }
+          if (isVideo && file.size > 80 * 1024 * 1024) { showToast('视频超过 80MB，未保存：' + file.name); setUploadProgress(i + 1, files.length); continue; }
           let blobToSave = file, dataUrl = null;
           if (isImage) {
             dataUrl = await compressImage(file);
@@ -1303,9 +1456,10 @@
           console.error('Save media failed', err);
           showToast('保存失败（可能存储空间不足）：' + file.name);
         }
+        setUploadProgress(i + 1, files.length, null, false);
       }
-      progress.textContent = `已保存 ${ok} / ${files.length} 个文件 ✅`;
-      setTimeout(() => { progress.style.display = 'none'; }, 2000);
+      setUploadProgress(files.length, files.length, null, false); // 停在 100% 让用户看到完成
+      setTimeout(() => setUploadProgress(1, 1), 1500); // 短暂展示后隐藏
       document.getElementById('mediaCaption').value = '';
       renderAlbum(); renderTimeline();
     }
@@ -1322,7 +1476,10 @@
         { id: 'sec-reminders', icon: '⏰', label: '下次提醒' },
         { id: 'sec-growth', icon: '📈', label: '生长曲线' },
         { id: 'sec-vaccine', icon: '💉', label: '疫苗计划' },
-        { id: 'sec-extras', icon: '🌟', label: '技能与里程碑' }
+        { id: 'sec-skills', icon: '🌟', label: '新技能' },
+        { id: 'sec-emotions', icon: '😊', label: '情绪记录' },
+        { id: 'sec-exercise', icon: '🏃', label: '运动户外' },
+        { id: 'sec-supplement', icon: '💊', label: '补剂维生素' }
       ]},
       { page: 'page-tips', icon: '💡', label: '建议', children: [
         { id: 'sec-stage', icon: '🎯', label: '当前阶段重点' },
@@ -1392,7 +1549,7 @@
       if (pageEl) pageEl.classList.add('active');
       const bottomBtn = document.querySelector(`.tab-bar .tab-btn[data-page="${pageId}"]`);
       if (bottomBtn) bottomBtn.classList.add('active');
-      if (pageId === 'page-dashboard') { renderDashboard(); renderGrowthCharts(); }
+      if (pageId === 'page-dashboard') { renderDashboard(); renderGrowthCharts(); renderExtraSections(); }
       if (pageId === 'page-tips') renderTips();
       if (pageId === 'page-album') renderAlbum();
       if (pageId === 'page-settings') { updateBabyInfo(); updateReminderInputs(); renderTimeline(); }
@@ -1451,8 +1608,9 @@
 
       // Save handlers
       document.getElementById('saveRecord').onclick = saveRecord;
-      document.getElementById('extraType').onchange = renderExtraTags;
-      renderExtraTags();
+      EXTRA_SECTIONS.forEach(bindExtraSection);
+      renderExtraSections();
+      bindBabyProfileOptions();
       document.getElementById('recordDate').onchange = () => { renderTodayRecords(); renderDashboard(); };
       document.getElementById('saveGrowth').onclick = () => {
         const h = document.getElementById('heightInput').value;
@@ -1462,17 +1620,8 @@
         document.getElementById('heightInput').value = ''; document.getElementById('weightInput').value = '';
         showToast('生长数据已保存'); renderDashboard();
       };
-      document.getElementById('saveExtra').onclick = () => {
-        const type = document.getElementById('extraType').value;
-        const text = document.getElementById('extraText').value.trim();
-        if (!text) { showToast('请填写内容'); return; }
-        store.addExtra({ type, text, date: todayStr(), created: Date.now() });
-        document.getElementById('extraText').value = '';
-        showToast('已保存'); renderExtras();
-        renderTimeline();
-      };
       document.getElementById('saveBaby').onclick = () => {
-        store.saveBaby({ name: document.getElementById('settingName').value.trim(), birth: document.getElementById('settingBirth').value, gender: document.getElementById('settingGender').value });
+        store.saveBaby({ name: document.getElementById('settingName').value.trim(), birth: document.getElementById('settingBirth').value, gender: currentGender() });
         setRecorder(document.getElementById('settingRecorder').value);
         updateBabyInfo(); renderTips(); renderVaccines(); showToast('宝宝资料已保存');
       };
