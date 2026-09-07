@@ -1,4 +1,4 @@
-const CACHE_NAME = 'baby-v4';
+const CACHE_NAME = 'baby-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -28,24 +28,42 @@ self.addEventListener('activate', event => {
   );
 });
 
+// 页面导航请求：网络优先，拿到新版本就更新缓存（保证发版后能尽快看到新页面）
+function networkFirst(request) {
+  return fetch(request).then(networkResponse => {
+    if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+      const clone = networkResponse.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+    }
+    return networkResponse;
+  }).catch(() => {
+    return caches.match(request).then(cached => cached || caches.match('./index.html'));
+  });
+}
+
+// 静态资源：缓存优先，离线可用
+function cacheFirst(request) {
+  return caches.match(request).then(response => {
+    if (response) return response;
+    return fetch(request).then(networkResponse => {
+      if (!networkResponse || networkResponse.status !== 200) return networkResponse;
+      if (networkResponse.type === 'basic') {
+        const clone = networkResponse.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+      }
+      return networkResponse;
+    }).catch(() => {
+      if (request.mode === 'navigate') {
+        return caches.match('./index.html');
+      }
+    });
+  });
+}
+
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      if (response) return response;
-      return fetch(event.request).then(networkResponse => {
-        if (!networkResponse || networkResponse.status !== 200) return networkResponse;
-        // Only cache same-origin assets; Firebase CDN scripts are cors and skipped here.
-        if (networkResponse.type === 'basic') {
-          const clone = networkResponse.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return networkResponse;
-      }).catch(() => {
-        // Fallback for navigation requests when offline
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
-    })
-  );
+  const url = new URL(event.request.url);
+  // 只处理同源请求；Firebase CDN 等跨域请求直接走网络
+  if (url.origin !== self.location.origin) return;
+  const isNavigation = event.request.mode === 'navigate' || url.pathname.endsWith('index.html') || url.pathname.endsWith('/');
+  event.respondWith(isNavigation ? networkFirst(event.request) : cacheFirst(event.request));
 });
