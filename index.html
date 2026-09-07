@@ -47,7 +47,8 @@
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
     body { padding-bottom: calc(80px + var(--safe-bottom)); }
-    .app-header { position: sticky; top: 0; z-index: 100; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 16px 20px 12px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .sticky-top { position: sticky; top: 0; z-index: 100; }
+    .app-header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 16px 20px 12px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
     .app-header h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
     .baby-info { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; font-size: 13px; opacity: 0.95; }
     .baby-info span { background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; }
@@ -135,6 +136,21 @@
       .side-btn.active { color: #fff !important; transform: none !important; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); box-shadow: 0 4px 12px rgba(240,98,146,0.35); }
       .page { max-width: 780px; }
     }
+
+    /* ===== 多级导航 ===== */
+    .caret { font-size: 11px; opacity: 0.7; transition: transform 0.2s; }
+    .nav-children { display: flex; flex-direction: column; gap: 2px; padding: 2px 0 8px 24px; }
+    .side-sub { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; border: none; background: none; font-size: 13px; font-family: inherit; color: var(--text-light); border-radius: 10px; cursor: pointer; text-align: left; transition: all 0.15s; }
+    .side-sub:hover { background: var(--bg); color: var(--text); }
+    .side-sub.active { color: var(--primary-dark); font-weight: 600; background: rgba(255,143,177,0.14); }
+    .sub-nav-bar { display: none; gap: 8px; padding: 8px 12px calc(8px + var(--safe-bottom)); background: rgba(255,255,255,0.97); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .sub-nav-bar::-webkit-scrollbar { display: none; }
+    .sub-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; padding: 7px 13px; border-radius: 18px; border: 1.5px solid var(--border); background: var(--bg); font-size: 13px; color: var(--text); font-family: inherit; cursor: pointer; white-space: nowrap; }
+    .sub-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    [id^="sec-"] { scroll-margin-top: 130px; }
+    @media (max-width: 767px) {
+      .sub-nav-bar { display: flex; }
+    }
   </style>
 </head>
 <body>
@@ -148,15 +164,11 @@
       <strong id="sideBabyName">设置宝宝</strong><br>
       <span id="sideBabyAge">--</span>
     </div>
-    <nav class="sidebar-nav">
-      <button class="tab-btn side-btn active" data-page="page-record"><span class="icon">📝</span><span>记录</span></button>
-      <button class="tab-btn side-btn" data-page="page-dashboard"><span class="icon">📊</span><span>成长</span></button>
-      <button class="tab-btn side-btn" data-page="page-tips"><span class="icon">💡</span><span>建议</span></button>
-      <button class="tab-btn side-btn" data-page="page-settings"><span class="icon">⚙️</span><span>设置</span></button>
-    </nav>
+    <nav class="sidebar-nav" id="sideNav"></nav>
     <div style="text-align:center;font-size:11px;color:var(--text-light);padding:8px 0;">☁️ 云同步已就绪</div>
   </aside>
 
+  <div class="sticky-top">
   <header class="app-header">
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <h1 style="flex:1;">🍼 宝宝成长记</h1>
@@ -170,6 +182,9 @@
       <span id="recorderTag" style="background:rgba(255,255,255,0.15);">👤 --</span>
     </div>
   </header>
+  <!-- 移动端二级快捷导航（桌面端隐藏） -->
+  <div class="sub-nav-bar" id="subNavBar"></div>
+  </div>
 
   <!-- 今日记录 -->
   <section class="page active" id="page-record">
@@ -189,13 +204,13 @@
       </div>
     </div>
 
-    <div class="card" id="formCard">
+    <div class="card" id="sec-record-form">
       <h2 class="card-title"><span id="catIcon">🍼</span><span id="catTitle">吃奶记录</span></h2>
       <div id="dynamicForm"></div>
       <button class="btn" id="saveRecord">保存记录</button>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-today-list">
       <h2 class="card-title">📝 今日记录</h2>
       <div class="records-list" id="todayRecords"></div>
     </div>
@@ -203,7 +218,7 @@
 
   <!-- 成长数据 -->
   <section class="page" id="page-dashboard">
-    <div class="dashboard-grid">
+    <div class="dashboard-grid" id="sec-overview">
       <div class="stat-card"><div class="stat-value" id="statMilk">0</div><div class="stat-label">今日奶量 ml</div></div>
       <div class="stat-card"><div class="stat-value" id="statFood">0</div><div class="stat-label">辅食次数</div></div>
       <div class="stat-card"><div class="stat-value" id="statPee">0</div><div class="stat-label">小便次数</div></div>
@@ -212,12 +227,12 @@
       <div class="stat-card"><div class="stat-value" id="statWater">0</div><div class="stat-label">喝水 ml</div></div>
     </div>
 
-    <div class="card" id="reminderCard">
+    <div class="card" id="sec-reminders">
       <h2 class="card-title">⏰ 下次提醒</h2>
       <div id="reminderList"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-growth">
       <h2 class="card-title">📏 生长曲线</h2>
       <div class="form-row">
         <label>记录身高 / 体重</label>
@@ -231,13 +246,13 @@
       <div class="chart-container"><canvas id="heightChart" class="chart"></canvas></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-vaccine">
       <h2 class="card-title">💉 疫苗计划</h2>
       <div id="vaccineSummary"></div>
       <div id="vaccineList"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-extras">
       <h2 class="card-title">🌟 技能 & 情绪 & 运动</h2>
       <div class="form-row">
         <label>类型</label>
@@ -260,12 +275,12 @@
 
   <!-- 阶段建议 -->
   <section class="page" id="page-tips">
-    <div class="card">
+    <div class="card" id="sec-stage">
       <h2 class="card-title">🎯 当前阶段重点</h2>
       <div id="stageSummary"></div>
     </div>
     <div id="suggestionCards"></div>
-    <div class="card">
+    <div class="card" id="sec-milestones">
       <h2 class="card-title">🌟 发育里程碑</h2>
       <p style="font-size:13px;color:var(--text-light);margin:0 0 12px;line-height:1.5;">各月龄典型发育参考（个体差异可达 1-2 个月，稍早稍晚都正常）。已记录过的里程碑会自动打勾。</p>
       <div id="milestoneRef"></div>
@@ -274,7 +289,7 @@
 
   <!-- 设置 -->
   <section class="page" id="page-settings">
-    <div class="card">
+    <div class="card" id="sec-remind-set">
       <h2 class="card-title">⏰ 提醒设置</h2>
       <p style="font-size:13px;color:var(--text-light);margin:0 0 12px;line-height:1.5;">设置后首页会显示下次建议时间。浏览器通知需授权才能弹窗提醒。</p>
       <div class="form-row"><label>喂奶间隔（分钟）</label><input type="number" id="reminderMilk" value="180" placeholder="例如：180"></div>
@@ -284,7 +299,7 @@
       <button class="btn btn-secondary" style="margin-top:10px;" id="requestNotify">开启浏览器通知</button>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-baby">
       <h2 class="card-title">👶 宝宝资料</h2>
       <div class="baby-form">
       <div class="form-row"><label>记录人昵称</label><input type="text" id="settingRecorder" placeholder="例如：妈妈、爸爸"></div>
@@ -296,7 +311,7 @@
         <button class="btn" id="saveBaby">保存资料</button>
       </div>
     </div>
-    <div class="card">
+    <div class="card" id="sec-sync">
       <h2 class="card-title">☁️ 云同步</h2>
       <p style="font-size:14px;color:var(--text-light);margin:0 0 12px;">
         状态：<strong id="syncStatus">--</strong>
@@ -313,13 +328,13 @@
       </p>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-app">
       <h2 class="card-title">📱 Android App</h2>
       <p style="font-size:14px;color:var(--text-light);margin:0 0 12px;">下载 Android 安装包，像原生应用一样使用</p>
       <a class="btn btn-secondary" href="download/宝宝成长记.apk" download style="text-decoration:none;">⬇️ 下载 Android App</a>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-data">
       <h2 class="card-title">💾 数据管理</h2>
       <button class="btn btn-secondary" id="exportData">导出备份 (JSON)</button>
       <button class="btn btn-secondary" style="margin-top:10px;" id="importDataBtn">导入备份</button>
@@ -327,7 +342,7 @@
       <button class="btn btn-secondary" style="margin-top:10px;color:#ff6b6b;border-color:#ff6b6b;" id="clearData">清空所有数据</button>
       <button class="btn btn-secondary" style="margin-top:10px;" id="clearCache">刷新缓存并重新加载</button>
     </div>
-    <div class="card">
+    <div class="card" id="sec-timeline">
       <h2 class="card-title">📊 本月时间线</h2>
       <div class="timeline" id="monthTimeline"></div>
     </div>
@@ -996,8 +1011,107 @@
       if (milkEl) { milkEl.value = r.milk; document.getElementById('reminderWater').value = r.water; document.getElementById('reminderSleep').value = r.sleep; }
     }
 
+    // ================= 多级导航 =================
+    // 一级菜单 → 二级板块锚点
+    const NAV_STRUCTURE = [
+      { page: 'page-record', icon: '📝', label: '记录', children: [
+        { id: 'sec-record-form', icon: '➕', label: '快速记录' },
+        { id: 'sec-today-list', icon: '📋', label: '今日记录' }
+      ]},
+      { page: 'page-dashboard', icon: '📊', label: '成长', children: [
+        { id: 'sec-overview', icon: '📌', label: '今日概览' },
+        { id: 'sec-reminders', icon: '⏰', label: '下次提醒' },
+        { id: 'sec-growth', icon: '📈', label: '生长曲线' },
+        { id: 'sec-vaccine', icon: '💉', label: '疫苗计划' },
+        { id: 'sec-extras', icon: '🌟', label: '技能与里程碑' }
+      ]},
+      { page: 'page-tips', icon: '💡', label: '建议', children: [
+        { id: 'sec-stage', icon: '🎯', label: '当前阶段重点' },
+        { id: 'sec-milestones', icon: '🌟', label: '发育里程碑' }
+      ]},
+      { page: 'page-settings', icon: '⚙️', label: '设置', children: [
+        { id: 'sec-remind-set', icon: '⏰', label: '提醒设置' },
+        { id: 'sec-baby', icon: '👶', label: '宝宝资料' },
+        { id: 'sec-sync', icon: '☁️', label: '云同步' },
+        { id: 'sec-app', icon: '📱', label: 'App 下载' },
+        { id: 'sec-data', icon: '💾', label: '数据管理' },
+        { id: 'sec-timeline', icon: '📅', label: '本月时间线' }
+      ]}
+    ];
+    let currentPage = 'page-record';
+    let expandedPage = 'page-record';
+    let currentSub = null;
+
+    function renderSideNav() {
+      const nav = document.getElementById('sideNav');
+      if (!nav) return;
+      nav.innerHTML = NAV_STRUCTURE.map(g => {
+        const isActive = g.page === currentPage;
+        const isExpanded = g.page === expandedPage;
+        return `<div class="nav-group">
+          <button class="tab-btn side-btn ${isActive ? 'active' : ''}" data-page="${g.page}">
+            <span class="icon">${g.icon}</span><span style="flex:1;text-align:left;">${g.label}</span>
+            <span class="caret" style="transform:rotate(${isExpanded ? 90 : 0}deg);">▸</span>
+          </button>
+          <div class="nav-children" style="display:${isExpanded ? 'flex' : 'none'};">
+            ${g.children.map(c => `<button class="side-sub ${c.id === currentSub ? 'active' : ''}" data-page="${g.page}" data-target="${c.id}"><span>${c.icon}</span><span>${c.label}</span></button>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+      nav.querySelectorAll('.side-btn').forEach(btn => btn.onclick = () => {
+        const p = btn.dataset.page;
+        if (p === currentPage && p === expandedPage) {
+          expandedPage = null;
+          renderSideNav();
+        } else {
+          switchPage(p);
+        }
+      });
+      nav.querySelectorAll('.side-sub').forEach(btn => btn.onclick = () => scrollToSection(btn.dataset.page, btn.dataset.target));
+    }
+
+    function renderSubNavBar() {
+      const bar = document.getElementById('subNavBar');
+      if (!bar) return;
+      const group = NAV_STRUCTURE.find(g => g.page === currentPage);
+      if (!group) { bar.style.display = 'none'; return; }
+      bar.style.display = 'flex';
+      bar.innerHTML = group.children.map(c => `<button class="sub-chip ${c.id === currentSub ? 'active' : ''}" data-target="${c.id}">${c.icon} ${c.label}</button>`).join('');
+      bar.querySelectorAll('.sub-chip').forEach(btn => btn.onclick = () => scrollToSection(currentPage, btn.dataset.target));
+    }
+
+    function switchPage(pageId) {
+      currentPage = pageId;
+      expandedPage = pageId;
+      currentSub = null;
+      document.querySelectorAll('.tab-btn, .page').forEach(el => el.classList.remove('active'));
+      const pageEl = document.getElementById(pageId);
+      if (pageEl) pageEl.classList.add('active');
+      const bottomBtn = document.querySelector(`.tab-bar .tab-btn[data-page="${pageId}"]`);
+      if (bottomBtn) bottomBtn.classList.add('active');
+      if (pageId === 'page-dashboard') { renderDashboard(); renderGrowthCharts(); }
+      if (pageId === 'page-tips') renderTips();
+      if (pageId === 'page-settings') { updateBabyInfo(); updateReminderInputs(); renderTimeline(); }
+      renderSideNav();
+      renderSubNavBar();
+      window.scrollTo({ top: 0 });
+    }
+
+    function scrollToSection(pageId, secId) {
+      if (pageId !== currentPage) switchPage(pageId);
+      currentSub = secId;
+      renderSideNav();
+      renderSubNavBar();
+      setTimeout(() => {
+        const el = document.getElementById(secId);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
+    }
+
     function init() {
       try {
+        renderSideNav();
+        renderSubNavBar();
         document.getElementById('recordDate').value = todayStr();
         renderForm('milk');
         updateBabyInfo();
@@ -1011,15 +1125,8 @@
         showError('页面初始化渲染失败：' + e.message + '。底部菜单仍可点击，请尝试刷新或清除缓存。');
       }
 
-      // Tab switching
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.onclick = () => {
-        document.querySelectorAll('.tab-btn, .page').forEach(el => el.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(btn.dataset.page).classList.add('active');
-        if (btn.dataset.page === 'page-dashboard') { renderDashboard(); renderGrowthCharts(); }
-        if (btn.dataset.page === 'page-tips') renderTips();
-        if (btn.dataset.page === 'page-settings') { updateBabyInfo(); updateReminderInputs(); renderTimeline(); }
-      });
+      // Tab switching（底部标签栏；边栏多级导航由 renderSideNav 绑定）
+      document.querySelectorAll('.tab-bar .tab-btn').forEach(btn => btn.onclick = () => switchPage(btn.dataset.page));
 
       // Category switching
       document.querySelectorAll('.segmented button').forEach(btn => btn.onclick = () => renderForm(btn.dataset.cat));
