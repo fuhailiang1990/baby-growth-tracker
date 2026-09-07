@@ -228,6 +228,11 @@
       <div id="stageSummary"></div>
     </div>
     <div id="suggestionCards"></div>
+    <div class="card">
+      <h2 class="card-title">🌟 发育里程碑</h2>
+      <p style="font-size:13px;color:var(--text-light);margin:0 0 12px;line-height:1.5;">各月龄典型发育参考（个体差异可达 1-2 个月，稍早稍晚都正常）。已记录过的里程碑会自动打勾。</p>
+      <div id="milestoneRef"></div>
+    </div>
   </section>
 
   <!-- 设置 -->
@@ -662,7 +667,7 @@
     }
 
     const extraTagMap = {
-      skill: ['第一次翻身', '第一次独坐', '第一次爬行', '第一次扶站', '第一次叫妈妈', '第一次叫爸爸', '模仿声音', '拍手', '挥手再见', '指物'],
+      skill: ['第一次抬头', '抬头稳', '第一次翻身', '第一次独坐', '第一次爬行', '第一次扶站', '第一次叫妈妈', '第一次叫爸爸', '笑出声', '抓握摇铃', '模仿声音', '拍手', '挥手再见', '指物'],
       emotion: ['开心', '平静', '哭闹', '烦躁', '认生', '好奇', '专注'],
       exercise: ['Tummy Time', '翻身', '爬行', '扶站', '独站', '户外散步', '游泳'],
       supplement: ['维生素D3', '维生素AD', '钙', '益生菌', 'DHA', '铁剂']
@@ -834,6 +839,44 @@
       const stage = getStage(months);
       document.getElementById('stageSummary').innerHTML = `<p style="font-size:14px;line-height:1.7;margin:0;">宝宝当前约 <strong>${months === null ? '--' : months + '个月'}</strong>，处于 <strong>${stage.name}</strong>。${stage.summary}</p>`;
       document.getElementById('suggestionCards').innerHTML = stage.tips.map(t => `<div class="card suggestion-card"><h3>${t.title}</h3><p>${t.content}</p></div>`).join('');
+      renderMilestoneRef();
+    }
+
+    // 各月龄典型发育里程碑（参考 WHO/CDC 发育标准，个体差异属正常）
+    // 每项: [图标, 描述, 匹配关键词（用于自动核对已记录的里程碑）]
+    const MILESTONE_REF = [
+      { month: 1, items: [['🏃','短暂抬头片刻','抬头'],['👀','注视人脸、追视移动物','追视'],['👂','对声音有反应（惊跳/眨眼）','声音']] },
+      { month: 2, items: [['🏃','俯卧抬头约 45°','抬头'],['😊','出现社会性微笑','微笑'],['🗣️','发出「咕咕」声','咕咕']] },
+      { month: 3, items: [['🏃','抬头 90° 且稳定','抬头'],['🤸','会从仰卧翻到俯卧','翻身'],['🧸','主动抓握摇铃、摇晃','抓握'],['😄','笑出声','笑出声'],['👀','追视 180°','追视']] },
+      { month: 4, items: [['🤸','翻身熟练、两侧都会','翻身'],['🧸','抓握玩具送入口中','抓握'],['😆','大笑、喜欢和人互动','大笑']] },
+      { month: 5, items: [['🪑','扶坐时头稳、能坐片刻','坐'],['🦶','抓脚玩耍、吃脚丫','脚'],['🫳','伸手主动够取玩具','够取']] },
+      { month: 6, items: [['🪑','能独坐片刻','独坐'],['🧸','会换手拿玩具','换手'],['🗣️','咿咿呀呀「对话」','咿呀'],['👶','开始认生','认生']] },
+      { month: 7, items: [['🪑','独坐稳不用扶','独坐'],['🐛','会原地转圈/匍匐挪动','爬'],['🫰','抓起小物件（葡萄干大小）','捏'],['🗣️','发出「ba、ma」音','ba']] },
+      { month: 8, items: [['🐛','手膝爬行','爬行'],['🫰','拇指食指捏取小物','捏'],['🙈','会玩躲猫猫','躲猫猫']] },
+      { month: 9, items: [['🐛','爬行熟练、会爬过障碍','爬行'],['🧍','扶着东西站起来','扶站'],['👏','模仿拍手、摇手','拍手']] },
+      { month: 10, items: [['🚶','扶着家具走（扶走）','扶走'],['🧍','独站片刻','独站'],['🙋','用手势表达（再见、要抱）','再见']] },
+      { month: 11, items: [['🧍','独站稳、尝试独走','独站'],['🗣️','有意识叫「妈妈/爸爸」','叫妈妈'],['📦','把东西放进容器','放进']] },
+      { month: 12, items: [['🚶','独立走几步','独走'],['🏋️','蹲下再站起','蹲'],['👂','听懂简单指令（给爸爸）','指令']] }
+    ];
+
+    function renderMilestoneRef() {
+      const el = document.getElementById('milestoneRef');
+      if (!el) return;
+      const months = ageMonths(store.get().baby?.birth);
+      const extras = store.get().extras || [];
+      const doneText = extras.map(e => e.text).join(' ');
+      el.innerHTML = MILESTONE_REF.map(g => {
+        const isCurrent = months !== null && g.month === months;
+        return `<div style="margin-bottom:12px;border:1.5px solid ${isCurrent ? 'var(--primary)' : 'var(--border)'};border-radius:12px;overflow:hidden;">
+          <div style="padding:8px 12px;font-size:13px;font-weight:600;background:${isCurrent ? 'var(--primary)' : 'var(--bg)'};color:${isCurrent ? '#fff' : 'var(--text)'};">${isCurrent ? '👉 ' : ''}${g.month} 月龄${isCurrent ? '（当前）' : ''}</div>
+          <div style="padding:8px 12px;display:flex;flex-direction:column;gap:6px;">
+            ${g.items.map(([icon, text, kw]) => {
+              const done = kw && doneText.includes(kw);
+              return `<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:${done ? '#4DB6AC' : 'var(--text)'};"><span>${done ? '✅' : icon}</span<span style="${done ? 'text-decoration:line-through;' : ''}">${text}</span></div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('');
     }
 
     function getStage(months) {
@@ -843,10 +886,27 @@
         { title: '💤 睡眠建议', content: '每日睡眠 14-17 小时，注意仰卧睡姿，避免包裹过紧。' },
         { title: '💩 观察重点', content: '胎便转黄便约 3-5 天；小便每天至少 6 次，说明摄入充足。' }
       ]};
-      if (months < 4) return { name: '小月龄', summary: '建立吃-玩-睡节奏，开始出现社会性微笑。', tips: [
-        { title: '🍼 喂养建议', content: '母乳/配方奶为主，奶量逐渐增至 120-180ml/次，每天 5-8 次。' },
-        { title: '🏃 运动建议', content: '多俯卧（Tummy Time），每次 3-5 分钟，促进颈部和上肢力量。' },
-        { title: '🧠 早教建议', content: '黑白/彩色卡追视、轻柔抚触、多和宝宝说话、播放舒缓音乐。' }
+      if (months < 2) return { name: '1月龄', summary: '黄疸逐渐消退，视觉开始聚焦，多趴多互动。', tips: [
+        { title: '🍼 喂养建议', content: '按需哺乳，每天约 8-12 次；出生 15 天后每天补维生素 D3（400IU）。' },
+        { title: '🏃 运动建议', content: '清醒时多练习俯卧抬头（Tummy Time），每次 1-3 分钟，每天数次。' },
+        { title: '🧠 早教建议', content: '黑白卡追视训练（距离 20-30cm）、轻柔抚触、多和宝宝说话。' }
+      ]};
+      if (months < 3) return { name: '2月龄', summary: '社会性微笑出现，抬头能到 45°，开始发出「哦啊」声。', tips: [
+        { title: '🍼 喂养建议', content: '奶量约 120-150ml/次，每天 6-8 次；继续每天补充维生素 D3。' },
+        { title: '🏃 运动建议', content: '每天累计 30 分钟以上 Tummy Time，用摇铃引导抬头和转头。' },
+        { title: '🧠 早教建议', content: '彩色卡追视、面对面逗笑、模仿宝宝发音，多回应他的「哦啊」声。' }
+      ]};
+      if (months < 4) return { name: '3月龄', summary: '抬头已稳，会翻身啦！笑出声、会抓玩具，是互动黄金期。', tips: [
+        { title: '🏃 运动建议', content: '继续加强 Tummy Time（每次 5-10 分钟）；帮助宝宝练习从仰卧翻到侧卧再翻身，两侧都要练。' },
+        { title: '🧠 早教建议', content: '用摇铃、布书引导抓握和追视；多对话、唱歌，宝宝会「咿咿呀呀」回应你。' },
+        { title: '💤 睡眠提示', content: '部分宝宝 4 个月左右会出现「睡眠倒退」，现在开始培养固定的睡前仪式（洗澡-抚触-关灯）。' },
+        { title: '🍼 喂养建议', content: '奶量约 150-180ml/次，每天 5-6 次；仍不需喂水（母乳/配方奶已含足够水分）。' }
+      ]};
+      if (months < 5) return { name: '4月龄', summary: '翻身熟练，开始尝试抓脚、翻身取物，为独坐储备力量。', tips: [
+        { title: '🏃 运动建议', content: '练习拉坐（握住小手轻轻拉起），加强翻身取物，用健身架练踢腿抓握。' },
+        { title: '🧠 早教建议', content: '玩躲猫猫、照镜子，给宝宝不同质地（软/硬/毛茸茸）的玩具触摸。' },
+        { title: '💤 睡眠提示', content: '若出现睡眠倒退（频繁夜醒），保持作息规律、夜间喂奶不互动，通常 2-4 周自行缓解。' },
+        { title: '🍼 喂养建议', content: '观察辅食信号（能扶坐、挺舌反射消失、对食物感兴趣），为 6 月龄加辅食做准备。' }
       ]};
       if (months < 7) return { name: '辅食准备期', summary: '口欲期明显，4-6 个月开始观察辅食信号。', tips: [
         { title: '🥄 辅食建议', content: '满 6 个月引入第一口辅食（高铁米粉），由稀到稠、由单一到多样。' },
