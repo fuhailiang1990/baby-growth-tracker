@@ -52,7 +52,7 @@
     .app-header h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
     .baby-info { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; font-size: 13px; opacity: 0.95; }
     .baby-info span { background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; }
-    .tab-bar { position: fixed; bottom: 0; left: 0; width: 100vw; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow-x: auto; background: rgba(255,255,255,0.96); backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: 8px 0 calc(8px + var(--safe-bottom)); z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.05); }
+    .tab-bar { position: fixed; bottom: 0; left: 0; width: 100vw; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); overflow-x: auto; background: rgba(255,255,255,0.96); backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: 8px 0 calc(8px + var(--safe-bottom)); z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.05); }
     .tab-btn { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: none; border: none; color: var(--text-light); font-size: 9px; padding: 4px 0; cursor: pointer; transition: all 0.2s; }
     .tab-btn .icon { font-size: 18px; line-height: 1; }
     .tab-btn.active { color: var(--primary-dark); transform: scale(1.05); }
@@ -148,6 +148,27 @@
     .sub-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; padding: 7px 13px; border-radius: 18px; border: 1.5px solid var(--border); background: var(--bg); font-size: 13px; color: var(--text); font-family: inherit; cursor: pointer; white-space: nowrap; }
     .sub-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     [id^="sec-"] { scroll-margin-top: 130px; }
+
+    /* ===== 宝宝相册 ===== */
+    .album-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    @media (min-width: 600px) { .album-grid { grid-template-columns: repeat(4, 1fr); } }
+    .album-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--bg); cursor: pointer; border: 1px solid var(--border); }
+    .album-item img, .album-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .album-item .badge { position: absolute; right: 6px; bottom: 6px; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; padding: 2px 7px; border-radius: 10px; }
+    .album-item .cap { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(transparent, rgba(0,0,0,0.6)); color: #fff; font-size: 11px; padding: 14px 8px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .album-item .del { position: absolute; top: 5px; right: 5px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(0,0,0,0.5); color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .album-item .local-tag { position: absolute; top: 5px; left: 5px; background: rgba(255,152,0,0.9); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 8px; }
+    .album-month-title { grid-column: 1 / -1; font-size: 14px; font-weight: 600; color: var(--primary-dark); margin: 8px 0 0; }
+    .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 400; flex-direction: column; align-items: center; justify-content: center; }
+    .lightbox.active { display: flex; }
+    .lb-body { max-width: 92vw; max-height: 78vh; display: flex; align-items: center; justify-content: center; }
+    .lb-body img, .lb-body video { max-width: 92vw; max-height: 78vh; border-radius: 8px; }
+    .lb-close { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: #fff; font-size: 18px; cursor: pointer; z-index: 2; }
+    .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: #fff; font-size: 26px; cursor: pointer; z-index: 2; }
+    .lb-prev { left: 10px; }
+    .lb-next { right: 10px; }
+    .lb-info { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: #fff; font-size: 14px; padding: 0 20px; line-height: 1.6; }
+    .lb-info .lb-del { margin-top: 8px; background: none; border: 1px solid rgba(255,255,255,0.4); color: #fff; border-radius: 16px; padding: 5px 14px; font-size: 12px; cursor: pointer; }
     @media (max-width: 767px) {
       .sub-nav-bar { display: flex; }
     }
@@ -287,6 +308,31 @@
     </div>
   </section>
 
+  <!-- 宝宝相册 -->
+  <section class="page" id="page-album">
+    <div class="card" id="sec-album-upload">
+      <h2 class="card-title">⬆️ 上传照片 / 视频</h2>
+      <p style="font-size:13px;color:var(--text-light);margin:0 0 12px;line-height:1.5;">记录宝宝的精彩瞬间。照片会压缩后同步到云端，多设备可见；视频较大，先保存在本机。</p>
+      <input type="file" id="mediaFileInput" accept="image/*,video/*" multiple class="hidden">
+      <div class="form-row">
+        <label>备注（可选，上传多个文件时共用）</label>
+        <input type="text" id="mediaCaption" placeholder="例如：第一次翻身、百天照、游泳">
+      </div>
+      <button class="btn" id="pickMediaBtn">📷 选择照片或视频</button>
+      <div id="uploadProgress" style="display:none;margin-top:12px;font-size:13px;color:var(--text-light);"></div>
+    </div>
+    <div class="card" id="sec-album-gallery">
+      <h2 class="card-title">🖼 相册墙</h2>
+      <div class="segmented" id="albumFilter" style="margin-bottom:12px;">
+        <button class="active" data-filter="all">全部</button>
+        <button data-filter="image">📷 照片</button>
+        <button data-filter="video">🎬 视频</button>
+      </div>
+      <div id="albumStats" style="font-size:13px;color:var(--text-light);margin-bottom:10px;"></div>
+      <div class="album-grid" id="albumGrid"></div>
+    </div>
+  </section>
+
   <!-- 设置 -->
   <section class="page" id="page-settings">
     <div class="card" id="sec-remind-set">
@@ -348,10 +394,20 @@
     </div>
   </section>
 
+  <!-- 图片/视频查看器 -->
+  <div class="lightbox" id="lightbox">
+    <button class="lb-close" id="lbClose">✕</button>
+    <button class="lb-nav lb-prev" id="lbPrev">‹</button>
+    <div class="lb-body" id="lbBody"></div>
+    <button class="lb-nav lb-next" id="lbNext">›</button>
+    <div class="lb-info" id="lbInfo"></div>
+  </div>
+
   <nav class="tab-bar">
     <button class="tab-btn active" data-page="page-record"><span class="icon">📝</span><span>记录</span></button>
     <button class="tab-btn" data-page="page-dashboard"><span class="icon">📊</span><span>成长</span></button>
     <button class="tab-btn" data-page="page-tips"><span class="icon">💡</span><span>建议</span></button>
+    <button class="tab-btn" data-page="page-album"><span class="icon">📷</span><span>相册</span></button>
     <button class="tab-btn" data-page="page-settings"><span class="icon">⚙️</span><span>设置</span></button>
   </nav>
 
@@ -372,6 +428,7 @@
         growth: Array.isArray(data.growth) ? data.growth : [],
         extras: Array.isArray(data.extras) ? data.extras : [],
         vaccines: Array.isArray(data.vaccines) ? data.vaccines : [],
+        media: Array.isArray(data.media) ? data.media : [],
         reminders: data.reminders && typeof data.reminders === 'object' ? data.reminders : { milk: 180, water: 120, sleep: 240 },
         lastUpdated: data.lastUpdated || 0
       };
@@ -398,6 +455,8 @@
       addGrowth(g) { const d = this.get(); g.id = Date.now(); g.recordedBy = getRecorder(); d.growth.push(g); this.set(d); },
       addExtra(e) { const d = this.get(); e.id = Date.now(); e.recordedBy = getRecorder(); d.extras.push(e); this.set(d); },
       delExtra(id) { const d = this.get(); d.extras = d.extras.filter(x => x.id !== id); this.set(d); },
+      addMedia(m) { const d = this.get(); m.id = m.id || Date.now() + Math.floor(Math.random() * 1000); m.recordedBy = getRecorder(); d.media.push(m); this.set(d); return m; },
+      delMedia(id) { const d = this.get(); d.media = d.media.filter(x => x.id !== id); this.set(d); },
       saveBaby(b) { const d = this.get(); d.baby = b; this.set(d); },
       saveVaccines(v) { const d = this.get(); d.vaccines = v; this.set(d); },
       saveReminders(r) { const d = this.get(); d.reminders = r; this.set(d); }
@@ -453,6 +512,7 @@
         cloud.growth = cloud.growth.length ? cloud.growth : local.growth;
         cloud.extras = cloud.extras.length ? cloud.extras : local.extras;
         cloud.vaccines = cloud.vaccines.length ? cloud.vaccines : local.vaccines;
+        cloud.media = cloud.media.length ? cloud.media : local.media;
         cloud.reminders = cloud.reminders.milk !== undefined ? cloud.reminders : local.reminders;
         return cloud;
       }
@@ -460,9 +520,11 @@
       const localIds = new Set(local.records.map(r => r.id));
       const growthIds = new Set(local.growth.map(g => g.id));
       const extraIds = new Set(local.extras.map(e => e.id));
+      const mediaIds = new Set(local.media.map(m => m.id));
       cloud.records.forEach(r => { if (!localIds.has(r.id)) local.records.push(r); });
       cloud.growth.forEach(g => { if (!growthIds.has(g.id)) local.growth.push(g); });
       cloud.extras.forEach(e => { if (!extraIds.has(e.id)) local.extras.push(e); });
+      cloud.media.forEach(m => { if (!mediaIds.has(m.id)) local.media.push(m); });
       if (cloud.vaccines.length && !local.vaccines.length) local.vaccines = cloud.vaccines;
       return local;
     }
@@ -491,6 +553,7 @@
           updateSyncUI();
           renderAll();
           setupCloudListener();
+          hydrateMediaFromCloud();
         })
         .catch(err => { console.error('Load from cloud failed', err); updateSyncUI(); });
     }
@@ -535,6 +598,7 @@
       renderDashboard();
       renderTips();
       renderTimeline();
+      renderAlbum();
     }
 
     // ================= Helpers =================
@@ -983,7 +1047,7 @@
     }
 
     function renderTimeline() {
-      const all = [...(store.get().records || []), ...(store.get().extras || []).map(e => ({ ...e, category: e.type, time: '' }))].sort((a, b) => b.created - a.created).slice(0, 30);
+      const all = [...(store.get().records || []), ...(store.get().extras || []).map(e => ({ ...e, category: e.type, time: '' })), ...(store.get().media || []).map(m => ({ ...m, category: 'media', time: '', text: (m.type === 'video' ? '🎬' : '🖼') + ' ' + (m.caption || (m.type === 'video' ? '视频' : '照片')) }))].sort((a, b) => b.created - a.created).slice(0, 30);
       const list = document.getElementById('monthTimeline');
       if (!all.length) { list.innerHTML = '<div class="empty-tip">还没有记录~</div>'; return; }
       list.innerHTML = all.map(r => {
@@ -1011,6 +1075,241 @@
       if (milkEl) { milkEl.value = r.milk; document.getElementById('reminderWater').value = r.water; document.getElementById('reminderSleep').value = r.sleep; }
     }
 
+    // ================= 宝宝相册 =================
+    // 照片/视频二进制存 IndexedDB（不占 localStorage），元数据走主存储自动云同步；
+    // 照片压缩为 dataURL 另存云端 media 节点，多设备可拉取。
+    const IDB_NAME = 'babyMediaDB';
+    const IDB_STORE = 'media';
+    let idbPromise = null;
+    function idbOpen() {
+      if (!idbPromise) {
+        idbPromise = new Promise((resolve, reject) => {
+          const req = indexedDB.open(IDB_NAME, 1);
+          req.onupgradeneeded = () => {
+            if (!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE);
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+      return idbPromise;
+    }
+    async function idbPut(id, blob) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(blob, id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    async function idbGet(id) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(id);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function idbDel(id) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    // 云端 media 节点（存图片 dataURL，按同步码隔离）
+    function cloudMediaRef() {
+      if (!fbSyncEnabled || !fbUid || typeof firebase !== 'object') return null;
+      return firebase.database().ref('users/' + (getSyncCode() || fbUid) + '/media');
+    }
+    function uploadMediaToCloud(item, dataUrl) {
+      const ref = cloudMediaRef();
+      if (!ref || item.type !== 'image' || !dataUrl) return;
+      ref.child(String(item.id)).set(dataUrl).catch(err => console.error('Media cloud upload failed', err));
+    }
+    function deleteMediaFromCloud(id) {
+      const ref = cloudMediaRef();
+      if (ref) ref.child(String(id)).remove().catch(() => {});
+    }
+    // 其他设备拉取云端照片到本地 IndexedDB
+    async function hydrateMediaFromCloud() {
+      const ref = cloudMediaRef();
+      if (!ref) return;
+      const metas = (store.get().media || []).filter(m => m.type === 'image');
+      for (const m of metas) {
+        if (await idbGet(m.id)) continue;
+        try {
+          const snap = await ref.child(String(m.id)).once('value');
+          const dataUrl = snap.val();
+          if (dataUrl && typeof dataUrl === 'string') {
+            await idbPut(m.id, await (await fetch(dataUrl)).blob());
+          }
+        } catch (e) { /* 忽略单个失败 */ }
+      }
+      if (currentPage === 'page-album') renderAlbum();
+    }
+
+    // 图片压缩：最长边 1280px，JPEG 0.82
+    function compressImage(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const max = 1280;
+            let w = img.width, h = img.height;
+            if (Math.max(w, h) > max) { const k = max / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.82));
+          };
+          img.onerror = reject;
+          img.src = reader.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function mediaObjectUrl(blob) { return URL.createObjectURL(blob); }
+
+    async function renderAlbum() {
+      const grid = document.getElementById('albumGrid');
+      const stats = document.getElementById('albumStats');
+      if (!grid) return;
+      const filter = document.querySelector('#albumFilter button.active')?.dataset.filter || 'all';
+      let items = (store.get().media || []).slice().sort((a, b) => b.id - a.id);
+      if (filter !== 'all') items = items.filter(m => m.type === filter);
+      const total = (store.get().media || []).length;
+      stats.textContent = total ? `共 ${total} 个瞬间（照片 ${(store.get().media || []).filter(m => m.type === 'image').length} · 视频 ${(store.get().media || []).filter(m => m.type === 'video').length}）` : '';
+      if (!items.length) { grid.innerHTML = '<div class="empty-tip" style="grid-column:1/-1;">相册还是空的，点击上方「选择照片或视频」记录宝宝的第一个瞬间吧~</div>'; return; }
+
+      let html = '', lastMonth = '';
+      for (const m of items) {
+        const month = (m.date || '').slice(0, 7);
+        if (month && month !== lastMonth) {
+          lastMonth = month;
+          html += `<div class="album-month-title">📅 ${month.replace('-', ' 年 ')} 月</div>`;
+        }
+        const blob = await idbGet(m.id);
+        if (!blob) {
+          html += `<div class="album-item" data-id="${m.id}" style="display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:12px;">${m.type === 'video' ? '🎬 本机视频' : '☁️ 同步中…'}</div>`;
+          continue;
+        }
+        const url = mediaObjectUrl(blob);
+        if (m.type === 'video') {
+          html += `<div class="album-item" data-id="${m.id}">
+            <video src="${url}" preload="metadata" muted></video>
+            <span class="badge">🎬</span>${m.caption ? `<div class="cap">${m.caption}</div>` : ''}${m.localOnly ? '<span class="local-tag">本机</span>' : ''}
+            <button class="del" data-id="${m.id}">🗑</button></div>`;
+        } else {
+          html += `<div class="album-item" data-id="${m.id}">
+            <img src="${url}" alt="${m.caption || ''}" loading="lazy">
+            ${m.caption ? `<div class="cap">${m.caption}</div>` : ''}
+            <button class="del" data-id="${m.id}">🗑</button></div>`;
+        }
+      }
+      grid.innerHTML = html;
+      grid.querySelectorAll('.album-item').forEach(el => el.onclick = e => {
+        if (e.target.classList.contains('del')) return;
+        openLightbox(Number(el.dataset.id));
+      });
+      grid.querySelectorAll('.del').forEach(btn => btn.onclick = async e => {
+        e.stopPropagation();
+        if (!confirm('删除这张照片/视频？')) return;
+        const id = Number(btn.dataset.id);
+        await idbDel(id).catch(() => {});
+        deleteMediaFromCloud(id);
+        store.delMedia(id);
+        renderAlbum(); renderTimeline();
+      });
+    }
+
+    // 查看器（lightbox）
+    let lbList = [], lbIndex = 0;
+    function openLightbox(id) {
+      const filter = document.querySelector('#albumFilter button.active')?.dataset.filter || 'all';
+      let items = (store.get().media || []).slice().sort((a, b) => b.id - a.id);
+      if (filter !== 'all') items = items.filter(m => m.type === filter);
+      lbList = items; lbIndex = items.findIndex(m => m.id === id);
+      if (lbIndex < 0) return;
+      showLbItem();
+      document.getElementById('lightbox').classList.add('active');
+    }
+    async function showLbItem() {
+      const m = lbList[lbIndex];
+      const body = document.getElementById('lbBody');
+      const info = document.getElementById('lbInfo');
+      body.innerHTML = '<div style="color:#fff;font-size:14px;">加载中…</div>';
+      info.innerHTML = '';
+      const blob = await idbGet(m.id);
+      if (!blob) { body.innerHTML = '<div style="color:#fff;">本设备暂无此文件' + (m.type === 'image' ? '，等待云同步' : '（视频仅存于拍摄设备）') + '</div>'; }
+      else {
+        const url = mediaObjectUrl(blob);
+        body.innerHTML = m.type === 'video' ? `<video src="${url}" controls autoplay playsinline></video>` : `<img src="${url}" alt="">`;
+      }
+      info.innerHTML = `<div>${m.caption ? '💬 ' + m.caption + '<br>' : ''}<span style="opacity:0.75;font-size:12px;">${m.date} · ${m.recordedBy || ''} · ${lbIndex + 1}/${lbList.length}</span></div>
+        <button class="lb-del" id="lbDelete">🗑 删除</button>`;
+      const delBtn = document.getElementById('lbDelete');
+      if (delBtn) delBtn.onclick = async () => {
+        if (!confirm('删除这张照片/视频？')) return;
+        const cur = lbList[lbIndex];
+        await idbDel(cur.id).catch(() => {});
+        deleteMediaFromCloud(cur.id);
+        store.delMedia(cur.id);
+        lbList = lbList.filter(x => x.id !== cur.id);
+        renderAlbum(); renderTimeline();
+        if (!lbList.length) { document.getElementById('lightbox').classList.remove('active'); return; }
+        if (lbIndex >= lbList.length) lbIndex = lbList.length - 1;
+        showLbItem();
+      };
+    }
+    function lbNav(dir) {
+      if (!lbList.length) return;
+      lbIndex = (lbIndex + dir + lbList.length) % lbList.length;
+      showLbItem();
+    }
+
+    async function handleMediaFiles(fileList) {
+      const files = Array.from(fileList || []);
+      if (!files.length) return;
+      const caption = document.getElementById('mediaCaption').value.trim();
+      const progress = document.getElementById('uploadProgress');
+      progress.style.display = 'block';
+      let ok = 0;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        progress.textContent = `正在保存 ${i + 1} / ${files.length}：${file.name}`;
+        try {
+          const isImage = file.type.startsWith('image/');
+          const isVideo = file.type.startsWith('video/');
+          if (!isImage && !isVideo) continue;
+          if (isVideo && file.size > 80 * 1024 * 1024) { showToast('视频超过 80MB，未保存：' + file.name); continue; }
+          let blobToSave = file, dataUrl = null;
+          if (isImage) {
+            dataUrl = await compressImage(file);
+            blobToSave = await (await fetch(dataUrl)).blob();
+          }
+          const item = store.addMedia({ type: isImage ? 'image' : 'video', caption, date: todayStr(), created: Date.now(), localOnly: !isImage });
+          await idbPut(item.id, blobToSave);
+          if (isImage && dataUrl) uploadMediaToCloud(item, dataUrl);
+          ok++;
+        } catch (err) {
+          console.error('Save media failed', err);
+          showToast('保存失败（可能存储空间不足）：' + file.name);
+        }
+      }
+      progress.textContent = `已保存 ${ok} / ${files.length} 个文件 ✅`;
+      setTimeout(() => { progress.style.display = 'none'; }, 2000);
+      document.getElementById('mediaCaption').value = '';
+      renderAlbum(); renderTimeline();
+    }
+
     // ================= 多级导航 =================
     // 一级菜单 → 二级板块锚点
     const NAV_STRUCTURE = [
@@ -1028,6 +1327,10 @@
       { page: 'page-tips', icon: '💡', label: '建议', children: [
         { id: 'sec-stage', icon: '🎯', label: '当前阶段重点' },
         { id: 'sec-milestones', icon: '🌟', label: '发育里程碑' }
+      ]},
+      { page: 'page-album', icon: '📷', label: '相册', children: [
+        { id: 'sec-album-upload', icon: '⬆️', label: '上传照片/视频' },
+        { id: 'sec-album-gallery', icon: '🖼', label: '相册墙' }
       ]},
       { page: 'page-settings', icon: '⚙️', label: '设置', children: [
         { id: 'sec-remind-set', icon: '⏰', label: '提醒设置' },
@@ -1091,6 +1394,7 @@
       if (bottomBtn) bottomBtn.classList.add('active');
       if (pageId === 'page-dashboard') { renderDashboard(); renderGrowthCharts(); }
       if (pageId === 'page-tips') renderTips();
+      if (pageId === 'page-album') renderAlbum();
       if (pageId === 'page-settings') { updateBabyInfo(); updateReminderInputs(); renderTimeline(); }
       renderSideNav();
       renderSubNavBar();
@@ -1130,6 +1434,20 @@
 
       // Category switching
       document.querySelectorAll('.segmented button').forEach(btn => btn.onclick = () => renderForm(btn.dataset.cat));
+
+      // 相册：上传 / 筛选 / 查看器
+      document.getElementById('pickMediaBtn').onclick = () => document.getElementById('mediaFileInput').click();
+      document.getElementById('mediaFileInput').onchange = e => { handleMediaFiles(e.target.files); e.target.value = ''; };
+      document.querySelectorAll('#albumFilter button').forEach(btn => btn.onclick = () => {
+        document.querySelectorAll('#albumFilter button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderAlbum();
+      });
+      document.getElementById('lbClose').onclick = () => document.getElementById('lightbox').classList.remove('active');
+      document.getElementById('lbPrev').onclick = () => lbNav(-1);
+      document.getElementById('lbNext').onclick = () => lbNav(1);
+      document.getElementById('lightbox').onclick = e => { if (e.target.id === 'lightbox') e.target.classList.remove('active'); };
+      hydrateMediaFromCloud();
 
       // Save handlers
       document.getElementById('saveRecord').onclick = saveRecord;
