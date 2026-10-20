@@ -58,6 +58,8 @@
     .tab-btn.active { color: var(--primary-dark); transform: scale(1.05); }
     .page { display: none; padding: 16px; max-width: 600px; margin: 0 auto; animation: fadeIn 0.25s ease; }
     .page.active { display: block; }
+    .record-sub { display: none; }
+    .record-sub.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     .card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); }
     .card-title { font-size: 16px; font-weight: 600; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; color: var(--primary-dark); }
@@ -212,30 +214,83 @@
   <!-- 今日记录 -->
   <section class="page active" id="page-record">
     <div class="card">
-      <h2 class="card-title">📅 今天</h2>
-      <div class="form-row">
+      <h2 class="card-title">📅 记录日期</h2>
+      <div class="form-row" style="margin-bottom:0;">
         <label>日期</label>
         <input type="date" id="recordDate">
       </div>
-      <div class="segmented">
-        <button class="active" data-cat="milk">🍼 吃奶</button>
-        <button data-cat="food">🥄 辅食</button>
-        <button data-cat="water">💧 喝水</button>
-        <button data-cat="pee">💦 小便</button>
-        <button data-cat="poop">💩 大便</button>
-        <button data-cat="sleep">💤 睡眠</button>
+    </div>
+
+    <div class="segmented" id="recordSubTabs" style="margin-bottom:16px;">
+      <button class="active" data-sub="daily">🍼 日常</button>
+      <button data-sub="supplement">💊 营养品</button>
+      <button data-sub="medicine">🩹 药品</button>
+      <button data-sub="foodtry">🥣 新食物</button>
+    </div>
+
+    <!-- 日常记录 -->
+    <div class="record-sub active" id="sub-daily">
+      <div class="card">
+        <h2 class="card-title">🏷️ 记录类型</h2>
+        <div class="segmented" id="dailyCats">
+          <button class="active" data-cat="milk">🍼 吃奶</button>
+          <button data-cat="food">🥄 辅食</button>
+          <button data-cat="water">💧 喝水</button>
+          <button data-cat="pee">💦 小便</button>
+          <button data-cat="poop">💩 大便</button>
+          <button data-cat="sleep">💤 睡眠</button>
+        </div>
+      </div>
+
+      <div class="card" id="sec-record-form">
+        <h2 class="card-title"><span id="catIcon">🍼</span><span id="catTitle">吃奶记录</span></h2>
+        <div id="dynamicForm"></div>
+        <button class="btn" id="saveRecord">保存记录</button>
+      </div>
+
+      <div class="card" id="sec-today-list">
+        <h2 class="card-title">📝 今日记录</h2>
+        <div class="records-list" id="todayRecords"></div>
       </div>
     </div>
 
-    <div class="card" id="sec-record-form">
-      <h2 class="card-title"><span id="catIcon">🍼</span><span id="catTitle">吃奶记录</span></h2>
-      <div id="dynamicForm"></div>
-      <button class="btn" id="saveRecord">保存记录</button>
+    <!-- 营养品记录 -->
+    <div class="record-sub" id="sub-supplement">
+      <div class="card" id="sec-supp-form">
+        <h2 class="card-title">💊 营养品记录</h2>
+        <div id="suppForm"></div>
+        <button class="btn" id="saveSuppRecord">保存营养品</button>
+      </div>
+      <div class="card" id="sec-supp-list">
+        <h2 class="card-title">📋 当日营养品记录</h2>
+        <div class="records-list" id="suppList"></div>
+      </div>
     </div>
 
-    <div class="card" id="sec-today-list">
-      <h2 class="card-title">📝 今日记录</h2>
-      <div class="records-list" id="todayRecords"></div>
+    <!-- 用药记录 -->
+    <div class="record-sub" id="sub-medicine">
+      <div class="card" id="sec-med-form">
+        <h2 class="card-title">🩹 用药记录</h2>
+        <div id="medForm"></div>
+        <button class="btn" id="saveMedRecord">保存用药</button>
+      </div>
+      <div class="card" id="sec-med-list">
+        <h2 class="card-title">📋 当日用药记录</h2>
+        <div class="records-list" id="medList"></div>
+      </div>
+    </div>
+
+    <!-- 新食物记录 -->
+    <div class="record-sub" id="sub-foodtry">
+      <div class="card" id="sec-foodtry-form">
+        <h2 class="card-title">🥣 新食物尝试</h2>
+        <div id="foodtryForm"></div>
+        <button class="btn" id="saveFoodtryRecord">保存新食物</button>
+      </div>
+      <div class="card" id="sec-foodtry-list">
+        <h2 class="card-title">📋 当日新食物记录</h2>
+        <div class="records-list" id="foodtryList"></div>
+      </div>
     </div>
   </section>
 
@@ -248,6 +303,8 @@
       <div class="stat-card"><div class="stat-value" id="statPoop">0</div><div class="stat-label">大便次数</div></div>
       <div class="stat-card"><div class="stat-value" id="statSleep">0</div><div class="stat-label">睡眠分钟</div></div>
       <div class="stat-card"><div class="stat-value" id="statWater">0</div><div class="stat-label">喝水 ml</div></div>
+      <div class="stat-card"><div class="stat-value" id="statSupp">0</div><div class="stat-label">营养品次数</div></div>
+      <div class="stat-card"><div class="stat-value" id="statMed">0</div><div class="stat-label">用药次数</div></div>
     </div>
 
     <div class="card" id="sec-reminders">
@@ -306,17 +363,6 @@
       </div>
       <button class="btn btn-secondary" id="saveExercise">保存运动</button>
       <div class="milestone-list" id="exerciseList" style="margin-top:14px;"></div>
-    </div>
-
-    <div class="card" id="sec-supplement">
-      <h2 class="card-title">💊 补剂 / 维生素</h2>
-      <div class="form-row">
-        <label>补充内容</label>
-        <input type="text" id="supplementText" placeholder="例如：维生素D3 1滴">
-        <div class="quick-tags" id="supplementTags"></div>
-      </div>
-      <button class="btn btn-secondary" id="saveSupplement">保存补剂</button>
-      <div class="milestone-list" id="supplementList" style="margin-top:14px;"></div>
     </div>
   </section>
 
@@ -708,6 +754,111 @@
         { name: 'quality', label: '睡眠质量', type: 'text', placeholder: '例如：安稳 / 易醒', tags: ['安稳', '易醒', '哭闹', '入睡困难', '抱睡', '奶睡'] }
       ]}
     };
+    const DAILY_CATS = ['milk', 'food', 'water', 'pee', 'poop', 'sleep'];
+
+    // 记录页二级子页面：营养品 / 药品 / 新食物
+    const SUB_FORMS = {
+      supplement: { containerId: 'suppForm', listId: 'suppList', saveBtnId: 'saveSuppRecord', icon: '💊', title: '营养品', emptyTip: '当日还没有营养品记录~', fields: [
+        { name: 'name', label: '营养品名称', type: 'text', placeholder: '例如：维生素D3', tags: ['维生素D3', '维生素AD', '钙', '益生菌', 'DHA', '铁剂', '锌', '乳铁蛋白'] },
+        { name: 'dose', label: '剂量', type: 'text', placeholder: '例如：1滴 / 1粒 / 1袋', tags: ['1滴', '1粒', '1袋', '1ml', '半支', '1支'] },
+        { name: 'note', label: '备注', type: 'text', placeholder: '可选，例如：随奶服用', tags: ['随奶服用', '早餐后', '晚餐后', '漏服'] },
+        { name: 'time', label: '时间', type: 'time' }
+      ]},
+      medicine: { containerId: 'medForm', listId: 'medList', saveBtnId: 'saveMedRecord', icon: '🩹', title: '药品', emptyTip: '当日还没有用药记录~', fields: [
+        { name: 'name', label: '药品名称', type: 'text', placeholder: '例如：对乙酰氨基酚滴剂', tags: ['对乙酰氨基酚', '布洛芬', '蒙脱石散', '妈咪爱', '开塞露', '炉甘石洗剂', '生理盐水滴鼻', '西甲硅油'] },
+        { name: 'dose', label: '剂量', type: 'text', placeholder: '例如：0.5ml / 半袋', tags: ['0.5ml', '1ml', '1.5ml', '2ml', '半袋', '1袋', '外用涂抹'] },
+        { name: 'reason', label: '症状 / 原因', type: 'text', placeholder: '例如：发烧 38.2℃', tags: ['发烧', '咳嗽', '流涕', '腹泻', '湿疹', '红屁屁', '鼻塞', '肠胀气', '吐奶'] },
+        { name: 'time', label: '时间', type: 'time' }
+      ]},
+      foodtry: { containerId: 'foodtryForm', listId: 'foodtryList', saveBtnId: 'saveFoodtryRecord', icon: '🥣', title: '新食物', emptyTip: '当日还没有新食物记录~', fields: [
+        { name: 'name', label: '新食物名称', type: 'text', placeholder: '例如：南瓜泥', tags: ['米粉', '南瓜泥', '胡萝卜泥', '土豆泥', '蛋黄', '苹果泥', '香蕉泥', '肉泥', '鱼泥', '肝泥', '面条', '小米粥'] },
+        { name: 'reaction', label: '反应 / 过敏', type: 'text', placeholder: '例如：无异常 / 轻微红疹', tags: ['无异常', '爱吃', '一般', '拒绝', '红疹', '腹泻', '呕吐', '胀气'] },
+        { name: 'note', label: '备注', type: 'text', placeholder: '例如：排敏进度', tags: ['排敏第1天', '排敏第2天', '排敏第3天', '已排敏'] },
+        { name: 'time', label: '时间', type: 'time' }
+      ]}
+    };
+    let currentSubTab = 'daily';
+
+    function activateRecordSub(sub) {
+      currentSubTab = sub;
+      document.querySelectorAll('#recordSubTabs button').forEach(b => b.classList.toggle('active', b.dataset.sub === sub));
+      document.querySelectorAll('#page-record .record-sub').forEach(el => el.classList.toggle('active', el.id === 'sub-' + sub));
+      if (sub !== 'daily') { renderSubForm(sub); renderSubList(sub); }
+      else renderTodayRecords();
+    }
+
+    function renderSubForm(sub) {
+      const cfg = SUB_FORMS[sub];
+      const container = document.getElementById(cfg.containerId);
+      if (!container) return;
+      container.innerHTML = cfg.fields.map(f => `
+        <div class="form-row">
+          <label>${f.label}</label>
+          <input type="${f.type}" id="sub_${sub}_${f.name}" placeholder="${f.placeholder || ''}" ${f.type === 'time' ? 'value="' + new Date().toTimeString().slice(0,5) + '"' : ''}>
+          ${f.tags ? `<div class="quick-tags" data-field="${f.name}">${f.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+        </div>
+      `).join('');
+      container.querySelectorAll('.quick-tags .tag').forEach(tag => tag.onclick = () => {
+        const field = tag.parentElement.dataset.field;
+        const input = document.getElementById(`sub_${sub}_${field}`);
+        if (input.type === 'number') { input.value = tag.textContent; }
+        else {
+          const val = tag.textContent;
+          input.value = input.value ? (input.value.split(/[,，、]/).map(s => s.trim()).includes(val) ? input.value : input.value + '，' + val) : val;
+        }
+        tag.classList.add('selected');
+        setTimeout(() => tag.classList.remove('selected'), 200);
+      });
+    }
+
+    function saveSubRecord(sub) {
+      const date = document.getElementById('recordDate').value || todayStr();
+      const cfg = SUB_FORMS[sub];
+      const data = { category: sub, date, created: Date.now() };
+      cfg.fields.forEach(f => { data[f.name] = document.getElementById(`sub_${sub}_${f.name}`).value; });
+      store.addRecord(data);
+      showToast('已保存');
+      renderSubList(sub);
+      renderDashboard();
+    }
+
+    function renderSubList(sub) {
+      const cfg = SUB_FORMS[sub];
+      const list = document.getElementById(cfg.listId);
+      if (!list) return;
+      const date = document.getElementById('recordDate').value || todayStr();
+      const records = (store.get().records || []).filter(r => r.category === sub && r.date === date).sort((a, b) => minutesFromTime(a.time) - minutesFromTime(b.time));
+      if (!records.length) { list.innerHTML = `<div class="empty-tip">${cfg.emptyTip}</div>`; return; }
+      list.innerHTML = records.map(r => {
+        const parts = [];
+        if (r.dose) parts.push(r.dose);
+        if (r.reason) parts.push(r.reason);
+        if (r.reaction) parts.push(r.reaction);
+        if (r.note) parts.push(r.note);
+        const text = parts.join(' · ') || '--';
+        const who = r.recordedBy ? `<span style="font-size:11px;color:var(--text-light);margin-left:6px;">@${r.recordedBy}</span>` : '';
+        return `<div class="record-item">
+          <span class="time">${r.time || '--:--'}</span>
+          <span class="content"><span class="icon">${cfg.icon}</span> ${r.name || '未命名'} ${text}${who}</span>
+          <span class="delete" data-id="${r.id}">🗑</span>
+        </div>`;
+      }).join('');
+      list.querySelectorAll('.delete').forEach(btn => btn.onclick = () => { store.delRecord(Number(btn.dataset.id)); renderSubList(sub); renderDashboard(); });
+    }
+
+    function renderAllSubLists() { Object.keys(SUB_FORMS).forEach(renderSubList); }
+
+    // 旧版「补剂/维生素」extras 数据迁移为营养品记录（保留原 id，避免多设备重复同步）
+    function migrateSupplementExtras() {
+      const d = store.get();
+      const supp = (d.extras || []).filter(e => e.type === 'supplement');
+      if (!supp.length) return;
+      supp.forEach(e => {
+        d.records.push({ id: e.id, category: 'supplement', name: e.text, dose: '', note: '', time: '', date: e.date, created: e.created || e.id, recordedBy: e.recordedBy });
+      });
+      d.extras = d.extras.filter(e => e.type !== 'supplement');
+      store.set(d);
+    }
 
     function renderForm(cat) {
       currentCat = cat;
@@ -736,7 +887,7 @@
         tag.classList.add('selected');
         setTimeout(() => tag.classList.remove('selected'), 200);
       });
-      document.querySelectorAll('.segmented button').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+      document.querySelectorAll('#dailyCats button').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
     }
 
     function saveRecord() {
@@ -750,12 +901,12 @@
       renderDashboard();
     }
 
-    function iconFor(cat) { return formConfigs[cat]?.icon || '📝'; }
-    function titleFor(cat) { return formConfigs[cat]?.title || cat; }
+    function iconFor(cat) { return formConfigs[cat]?.icon || SUB_FORMS[cat]?.icon || '📝'; }
+    function titleFor(cat) { return formConfigs[cat]?.title || SUB_FORMS[cat]?.title || cat; }
 
     function renderTodayRecords() {
       const date = document.getElementById('recordDate').value || todayStr();
-      const records = (store.get().records || []).filter(r => r.date === date).sort((a, b) => minutesFromTime(a.time) - minutesFromTime(b.time));
+      const records = (store.get().records || []).filter(r => r.date === date && DAILY_CATS.includes(r.category)).sort((a, b) => minutesFromTime(a.time) - minutesFromTime(b.time));
       const list = document.getElementById('todayRecords');
       if (!records.length) { list.innerHTML = '<div class="empty-tip">今天还没有记录，开始第一条吧~</div>'; return; }
       list.innerHTML = records.map(r => {
@@ -790,6 +941,8 @@
       document.getElementById('statPoop').textContent = recs.filter(r => r.category === 'poop').length;
       document.getElementById('statWater').textContent = recs.filter(r => r.category === 'water').reduce((s, r) => s + Number(r.amount || 0), 0);
       document.getElementById('statSleep').textContent = recs.filter(r => r.category === 'sleep').reduce((s, r) => s + sleepMinutes(r.start, r.end), 0);
+      document.getElementById('statSupp').textContent = recs.filter(r => r.category === 'supplement').length;
+      document.getElementById('statMed').textContent = recs.filter(r => r.category === 'medicine').length;
       renderGrowthCharts();
       renderExtraSections();
       renderReminders();
@@ -829,14 +982,12 @@
     const extraTagMap = {
       skill: ['第一次抬头', '抬头稳', '第一次翻身', '第一次独坐', '第一次爬行', '第一次扶站', '第一次叫妈妈', '第一次叫爸爸', '笑出声', '抓握摇铃', '模仿声音', '拍手', '挥手再见', '指物'],
       emotion: ['开心', '平静', '哭闹', '烦躁', '认生', '好奇', '专注'],
-      exercise: ['Tummy Time', '翻身练习', '抓握练习', '户外散步', '游泳', '健身架踢腿'],
-      supplement: ['维生素D3 1滴', '维生素AD 1粒', '钙', '益生菌', 'DHA', '铁剂']
+      exercise: ['Tummy Time', '翻身练习', '抓握练习', '户外散步', '游泳', '健身架踢腿']
     };
     const EXTRA_SECTIONS = [
       { type: 'skill', tagsId: 'skillTags', inputId: 'skillText', listId: 'skillList', btnId: 'saveSkill', emptyTip: '还没有记录技能，点上方标签快速记录宝宝的第一次吧~' },
       { type: 'emotion', tagsId: 'emotionTags', inputId: 'emotionText', listId: 'emotionList', btnId: 'saveEmotion', emptyTip: '还没有情绪记录~' },
-      { type: 'exercise', tagsId: 'exerciseTags', inputId: 'exerciseText', listId: 'exerciseList', btnId: 'saveExercise', emptyTip: '还没有运动记录~' },
-      { type: 'supplement', tagsId: 'supplementTags', inputId: 'supplementText', listId: 'supplementList', btnId: 'saveSupplement', emptyTip: '还没有补剂记录~' }
+      { type: 'exercise', tagsId: 'exerciseTags', inputId: 'exerciseText', listId: 'exerciseList', btnId: 'saveExercise', emptyTip: '还没有运动记录~' }
     ];
 
     function bindExtraSection(sec) {
@@ -1116,7 +1267,8 @@
       if (!all.length) { list.innerHTML = '<div class="empty-tip">还没有记录~</div>'; return; }
       list.innerHTML = all.map(r => {
         const who = r.recordedBy ? `<span style="font-size:11px;color:var(--text-light);">@${r.recordedBy}</span>` : '';
-        return `<div class="timeline-item"><div class="timeline-date">${r.date} ${r.time} ${who}</div><div class="timeline-text">${iconFor(r.category)} ${titleFor(r.category)} ${r.amount || r.food || r.text || r.note || r.color || ''}</div></div>`;
+        const detail = [r.name, r.dose, r.reason, r.food, r.amount, r.text, r.note, r.color].filter(Boolean).join(' ');
+        return `<div class="timeline-item"><div class="timeline-date">${r.date} ${r.time} ${who}</div><div class="timeline-text">${iconFor(r.category)} ${titleFor(r.category)} ${detail}</div></div>`;
       }).join('');
     }
 
@@ -1468,7 +1620,10 @@
     // 一级菜单 → 二级板块锚点
     const NAV_STRUCTURE = [
       { page: 'page-record', icon: '📝', label: '记录', children: [
-        { id: 'sec-record-form', icon: '➕', label: '快速记录' },
+        { id: 'sec-record-form', icon: '🍼', label: '日常记录' },
+        { id: 'sec-supp-form', icon: '💊', label: '营养品' },
+        { id: 'sec-med-form', icon: '🩹', label: '药品' },
+        { id: 'sec-foodtry-form', icon: '🥣', label: '新食物' },
         { id: 'sec-today-list', icon: '📋', label: '今日记录' }
       ]},
       { page: 'page-dashboard', icon: '📊', label: '成长', children: [
@@ -1478,8 +1633,7 @@
         { id: 'sec-vaccine', icon: '💉', label: '疫苗计划' },
         { id: 'sec-skills', icon: '🌟', label: '新技能' },
         { id: 'sec-emotions', icon: '😊', label: '情绪记录' },
-        { id: 'sec-exercise', icon: '🏃', label: '运动户外' },
-        { id: 'sec-supplement', icon: '💊', label: '补剂维生素' }
+        { id: 'sec-exercise', icon: '🏃', label: '运动户外' }
       ]},
       { page: 'page-tips', icon: '💡', label: '建议', children: [
         { id: 'sec-stage', icon: '🎯', label: '当前阶段重点' },
@@ -1560,6 +1714,10 @@
 
     function scrollToSection(pageId, secId) {
       if (pageId !== currentPage) switchPage(pageId);
+      // 记录页二级子页面：目标在隐藏的子页面里时先激活对应子标签
+      const targetEl = document.getElementById(secId);
+      const subWrap = targetEl ? targetEl.closest('.record-sub') : null;
+      if (subWrap) activateRecordSub(subWrap.id.replace('sub-', ''));
       currentSub = secId;
       renderSideNav();
       renderSubNavBar();
@@ -1571,6 +1729,7 @@
 
     function init() {
       try {
+        migrateSupplementExtras();
         renderSideNav();
         renderSubNavBar();
         document.getElementById('recordDate').value = todayStr();
@@ -1578,6 +1737,7 @@
         updateBabyInfo();
         updateReminderInputs();
         renderTodayRecords();
+        renderAllSubLists();
         renderDashboard();
         renderTips();
         renderTimeline();
@@ -1589,8 +1749,11 @@
       // Tab switching（底部标签栏；边栏多级导航由 renderSideNav 绑定）
       document.querySelectorAll('.tab-bar .tab-btn').forEach(btn => btn.onclick = () => switchPage(btn.dataset.page));
 
-      // Category switching
-      document.querySelectorAll('.segmented button').forEach(btn => btn.onclick = () => renderForm(btn.dataset.cat));
+      // 记录页二级子页面切换
+      document.querySelectorAll('#recordSubTabs button').forEach(btn => btn.onclick = () => activateRecordSub(btn.dataset.sub));
+
+      // 日常记录分类切换
+      document.querySelectorAll('#dailyCats button').forEach(btn => btn.onclick = () => renderForm(btn.dataset.cat));
 
       // 相册：上传 / 筛选 / 查看器
       document.getElementById('pickMediaBtn').onclick = () => document.getElementById('mediaFileInput').click();
@@ -1608,10 +1771,13 @@
 
       // Save handlers
       document.getElementById('saveRecord').onclick = saveRecord;
+      Object.keys(SUB_FORMS).forEach(sub => {
+        document.getElementById(SUB_FORMS[sub].saveBtnId).onclick = () => saveSubRecord(sub);
+      });
       EXTRA_SECTIONS.forEach(bindExtraSection);
       renderExtraSections();
       bindBabyProfileOptions();
-      document.getElementById('recordDate').onchange = () => { renderTodayRecords(); renderDashboard(); };
+      document.getElementById('recordDate').onchange = () => { renderTodayRecords(); renderAllSubLists(); renderDashboard(); };
       document.getElementById('saveGrowth').onclick = () => {
         const h = document.getElementById('heightInput').value;
         const w = document.getElementById('weightInput').value;
