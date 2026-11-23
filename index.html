@@ -85,6 +85,9 @@
     .record-item .content { flex: 1; padding: 0 10px; font-size: 14px; }
     .record-item .icon { font-size: 20px; }
     .record-item .delete { color: #ff6b6b; font-size: 18px; cursor: pointer; padding: 4px; }
+    .record-item .edit { color: #4a90d9; font-size: 18px; cursor: pointer; padding: 4px; }
+    .edit-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #fff7e6; border: 1.5px solid #ffd591; color: #ad6800; border-radius: 12px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
+    .edit-banner button { background: none; border: none; color: #ad6800; font-size: 13px; cursor: pointer; padding: 6px 8px; white-space: nowrap; }
     .empty-tip { text-align: center; color: var(--text-light); font-size: 14px; padding: 24px 0; }
     .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
     .stat-card { background: var(--card); border-radius: var(--radius); padding: 16px; text-align: center; box-shadow: var(--shadow); border: 1px solid var(--border); }
@@ -213,6 +216,10 @@
 
   <!-- 今日记录 -->
   <section class="page active" id="page-record">
+    <div id="editBanner" class="edit-banner" style="display: none;">
+      <span>✏️ 正在编辑一条记录，修改后点「更新记录」保存</span>
+      <button id="cancelEditBtn" type="button">✕ 取消编辑</button>
+    </div>
     <div class="card">
       <h2 class="card-title">📅 记录日期</h2>
       <div class="form-row" style="margin-bottom:0;">
@@ -321,9 +328,11 @@
           <input type="number" step="0.01" id="weightInput" placeholder="体重 kg">
         </div>
         <button class="btn btn-secondary" style="margin-top:10px;" id="saveGrowth">记录生长数据</button>
+        <button class="btn btn-secondary" style="margin-top:10px;display:none;" id="cancelGrowthEdit">✕ 取消编辑</button>
       </div>
       <div class="chart-container"><canvas id="weightChart" class="chart"></canvas></div>
       <div class="chart-container"><canvas id="heightChart" class="chart"></canvas></div>
+      <div class="records-list" id="growthList" style="margin-top: 12px;"></div>
     </div>
 
     <div class="card" id="sec-vaccine">
@@ -542,7 +551,10 @@
       },
       addRecord(r) { const d = this.get(); r.id = Date.now(); r.recordedBy = getRecorder(); d.records.push(r); this.set(d); return r; },
       delRecord(id) { const d = this.get(); d.records = d.records.filter(x => x.id !== id); this.set(d); },
+      updateRecord(id, patch) { const d = this.get(); const r = d.records.find(x => x.id === id); if (r) { Object.assign(r, patch); r.editedBy = getRecorder(); this.set(d); return r; } },
       addGrowth(g) { const d = this.get(); g.id = Date.now(); g.recordedBy = getRecorder(); d.growth.push(g); this.set(d); },
+      updateGrowth(id, patch) { const d = this.get(); const g = d.growth.find(x => x.id === id); if (g) { Object.assign(g, patch); g.editedBy = getRecorder(); this.set(d); return g; } },
+      delGrowth(id) { const d = this.get(); d.growth = d.growth.filter(x => x.id !== id); this.set(d); },
       addExtra(e) { const d = this.get(); e.id = Date.now(); e.recordedBy = getRecorder(); d.extras.push(e); this.set(d); },
       delExtra(id) { const d = this.get(); d.extras = d.extras.filter(x => x.id !== id); this.set(d); },
       addMedia(m) { const d = this.get(); m.id = m.id || Date.now() + Math.floor(Math.random() * 1000); m.recordedBy = getRecorder(); d.media.push(m); this.set(d); return m; },
@@ -780,6 +792,12 @@
     let currentSubTab = 'daily';
 
     function activateRecordSub(sub) {
+      // 切换标签时若正在编辑其他分类的记录，则取消编辑
+      if (editingRecordId !== null) {
+        const er = store.get().records.find(x => x.id === editingRecordId);
+        const group = er ? (DAILY_CATS.includes(er.category) ? 'daily' : er.category) : null;
+        if (group !== sub) cancelEdit();
+      }
       currentSubTab = sub;
       document.querySelectorAll('#recordSubTabs button').forEach(b => b.classList.toggle('active', b.dataset.sub === sub));
       document.querySelectorAll('#page-record .record-sub').forEach(el => el.classList.toggle('active', el.id === 'sub-' + sub));
@@ -814,11 +832,21 @@
     function saveSubRecord(sub) {
       const date = document.getElementById('recordDate').value || todayStr();
       const cfg = SUB_FORMS[sub];
-      const data = { category: sub, date, created: Date.now() };
+      const data = { category: sub, date };
       cfg.fields.forEach(f => { data[f.name] = document.getElementById(`sub_${sub}_${f.name}`).value; });
-      store.addRecord(data);
-      showToast('已保存');
+      if (editingRecordId) {
+        store.updateRecord(editingRecordId, data);
+        editingRecordId = null;
+        updateEditUI();
+        renderSubForm(sub);
+        showToast('已更新');
+      } else {
+        data.created = Date.now();
+        store.addRecord(data);
+        showToast('已保存');
+      }
       renderSubList(sub);
+      renderAllSubLists();
       renderDashboard();
     }
 
@@ -840,13 +868,121 @@
         return `<div class="record-item">
           <span class="time">${r.time || '--:--'}</span>
           <span class="content"><span class="icon">${cfg.icon}</span> ${r.name || '未命名'} ${text}${who}</span>
+          <span class="edit" data-id="${r.id}">✏️</span>
           <span class="delete" data-id="${r.id}">🗑</span>
         </div>`;
       }).join('');
-      list.querySelectorAll('.delete').forEach(btn => btn.onclick = () => { store.delRecord(Number(btn.dataset.id)); renderSubList(sub); renderDashboard(); });
+      list.querySelectorAll('.edit').forEach(btn => btn.onclick = () => startEditRecord(Number(btn.dataset.id)));
+      list.querySelectorAll('.delete').forEach(btn => btn.onclick = () => {
+        const rid = Number(btn.dataset.id);
+        if (editingRecordId === rid) cancelEdit();
+        if (!confirm('确定删除这条记录吗？')) return;
+        store.delRecord(rid);
+        renderSubList(sub);
+        renderDashboard();
+      });
     }
 
     function renderAllSubLists() { Object.keys(SUB_FORMS).forEach(renderSubList); }
+
+    // ================= 记录编辑 / 生长数据编辑 =================
+    let editingRecordId = null;
+    let editingGrowthId = null;
+
+    function updateEditUI() {
+      const banner = document.getElementById('editBanner');
+      if (banner) banner.style.display = editingRecordId ? 'flex' : 'none';
+      const saveBtn = document.getElementById('saveRecord');
+      if (saveBtn) saveBtn.textContent = editingRecordId ? '✅ 更新记录' : '保存记录';
+      Object.keys(SUB_FORMS).forEach(sub => {
+        const btn = document.getElementById(SUB_FORMS[sub].saveBtnId);
+        if (btn) btn.textContent = editingRecordId ? `✅ 更新${SUB_FORMS[sub].title}` : `保存${SUB_FORMS[sub].title}`;
+      });
+      const gBtn = document.getElementById('saveGrowth');
+      if (gBtn) gBtn.textContent = editingGrowthId ? '✅ 更新生长数据' : '记录生长数据';
+      const gCancel = document.getElementById('cancelGrowthEdit');
+      if (gCancel) gCancel.style.display = editingGrowthId ? 'block' : 'none';
+    }
+
+    function startEditRecord(id) {
+      const rec = store.get().records.find(x => x.id === id);
+      if (!rec) return;
+      cancelEditGrowth();
+      document.getElementById('recordDate').value = rec.date;
+      const isDaily = DAILY_CATS.includes(rec.category);
+      if (isDaily) {
+        activateRecordSub('daily');
+        if (currentCat !== rec.category) renderForm(rec.category);
+      } else {
+        activateRecordSub(rec.category);
+      }
+      editingRecordId = id;
+      const cfg = isDaily ? formConfigs[rec.category] : SUB_FORMS[rec.category];
+      const prefix = isDaily ? 'field_' : `sub_${rec.category}_`;
+      cfg.fields.forEach(f => {
+        const el = document.getElementById(prefix + f.name);
+        if (el) el.value = rec[f.name] ?? '';
+      });
+      updateEditUI();
+      document.getElementById('page-record').scrollIntoView({ behavior: 'smooth' });
+      showToast('✏️ 正在编辑，改完点「更新记录」');
+    }
+
+    function cancelEdit() {
+      if (editingRecordId === null) return;
+      editingRecordId = null;
+      updateEditUI();
+      renderForm(currentCat);
+      Object.keys(SUB_FORMS).forEach(renderSubForm);
+    }
+
+    function startEditGrowth(id) {
+      const g = store.get().growth.find(x => x.id === id);
+      if (!g) return;
+      cancelEdit();
+      editingGrowthId = id;
+      document.getElementById('heightInput').value = g.height || '';
+      document.getElementById('weightInput').value = g.weight || '';
+      updateEditUI();
+      document.getElementById('sec-growth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      showToast('✏️ 正在编辑生长数据，改完点「更新生长数据」');
+    }
+
+    function cancelEditGrowth() {
+      if (editingGrowthId === null) return;
+      editingGrowthId = null;
+      document.getElementById('heightInput').value = '';
+      document.getElementById('weightInput').value = '';
+      updateEditUI();
+    }
+
+    function renderGrowthList() {
+      const list = document.getElementById('growthList');
+      if (!list) return;
+      const growth = (store.get().growth || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+      if (!growth.length) { list.innerHTML = ''; return; }
+      list.innerHTML = growth.map(g => {
+        const who = g.recordedBy ? `<span style="font-size:11px;color:var(--text-light);margin-left:6px;">@${g.recordedBy}</span>` : '';
+        const parts = [];
+        if (g.height) parts.push(`身高 ${g.height}cm`);
+        if (g.weight) parts.push(`体重 ${g.weight}kg`);
+        return `<div class="record-item">
+          <span class="time" style="min-width:82px;">${g.date || '--'}</span>
+          <span class="content"><span class="icon">📏</span> ${parts.join(' · ') || '--'}${who}</span>
+          <span class="edit" data-id="${g.id}">✏️</span>
+          <span class="delete" data-id="${g.id}">🗑</span>
+        </div>`;
+      }).join('');
+      list.querySelectorAll('.edit').forEach(btn => btn.onclick = () => startEditGrowth(Number(btn.dataset.id)));
+      list.querySelectorAll('.delete').forEach(btn => btn.onclick = () => {
+        const gid = Number(btn.dataset.id);
+        if (editingGrowthId === gid) cancelEditGrowth();
+        if (!confirm('确定删除这条生长数据吗？')) return;
+        store.delGrowth(gid);
+        renderGrowthList();
+        renderDashboard();
+      });
+    }
 
     // 旧版「补剂/维生素」extras 数据迁移为营养品记录（保留原 id，避免多设备重复同步）
     function migrateSupplementExtras() {
@@ -893,11 +1029,21 @@
     function saveRecord() {
       const date = document.getElementById('recordDate').value || todayStr();
       const cfg = formConfigs[currentCat];
-      const data = { category: currentCat, date, created: Date.now() };
+      const data = { category: currentCat, date };
       cfg.fields.forEach(f => { data[f.name] = document.getElementById('field_' + f.name).value; });
-      store.addRecord(data);
-      showToast('已保存');
+      if (editingRecordId) {
+        store.updateRecord(editingRecordId, data);
+        editingRecordId = null;
+        updateEditUI();
+        renderForm(currentCat);
+        showToast('已更新');
+      } else {
+        data.created = Date.now();
+        store.addRecord(data);
+        showToast('已保存');
+      }
       renderTodayRecords();
+      renderAllSubLists();
       renderDashboard();
     }
 
@@ -926,10 +1072,19 @@
         return `<div class="record-item">
           <span class="time">${r.time || r.start || '--:--'}</span>
           <span class="content"><span class="icon">${iconFor(r.category)}</span> ${titleFor(r.category)} ${text}${who}</span>
+          <span class="edit" data-id="${r.id}">✏️</span>
           <span class="delete" data-id="${r.id}">🗑</span>
         </div>`;
       }).join('');
-      list.querySelectorAll('.delete').forEach(btn => btn.onclick = () => { store.delRecord(Number(btn.dataset.id)); renderTodayRecords(); renderDashboard(); });
+      list.querySelectorAll('.edit').forEach(btn => btn.onclick = () => startEditRecord(Number(btn.dataset.id)));
+      list.querySelectorAll('.delete').forEach(btn => btn.onclick = () => {
+        const rid = Number(btn.dataset.id);
+        if (editingRecordId === rid) cancelEdit();
+        if (!confirm('确定删除这条记录吗？')) return;
+        store.delRecord(rid);
+        renderTodayRecords();
+        renderDashboard();
+      });
     }
 
     function renderDashboard() {
@@ -944,6 +1099,7 @@
       document.getElementById('statSupp').textContent = recs.filter(r => r.category === 'supplement').length;
       document.getElementById('statMed').textContent = recs.filter(r => r.category === 'medicine').length;
       renderGrowthCharts();
+      renderGrowthList();
       renderExtraSections();
       renderReminders();
       renderVaccines();
@@ -1771,21 +1927,32 @@
 
       // Save handlers
       document.getElementById('saveRecord').onclick = saveRecord;
+      document.getElementById('cancelEditBtn').onclick = cancelEdit;
       Object.keys(SUB_FORMS).forEach(sub => {
         document.getElementById(SUB_FORMS[sub].saveBtnId).onclick = () => saveSubRecord(sub);
       });
       EXTRA_SECTIONS.forEach(bindExtraSection);
       renderExtraSections();
       bindBabyProfileOptions();
-      document.getElementById('recordDate').onchange = () => { renderTodayRecords(); renderAllSubLists(); renderDashboard(); };
+      document.getElementById('recordDate').onchange = () => { cancelEdit(); renderTodayRecords(); renderAllSubLists(); renderDashboard(); };
       document.getElementById('saveGrowth').onclick = () => {
         const h = document.getElementById('heightInput').value;
         const w = document.getElementById('weightInput').value;
         if (!h && !w) { showToast('请填写身高或体重'); return; }
-        store.addGrowth({ date: todayStr(), height: h, weight: w, created: Date.now() });
+        if (editingGrowthId) {
+          store.updateGrowth(editingGrowthId, { height: h, weight: w });
+          editingGrowthId = null;
+          updateEditUI();
+          showToast('生长数据已更新');
+        } else {
+          store.addGrowth({ date: todayStr(), height: h, weight: w, created: Date.now() });
+          showToast('生长数据已保存');
+        }
         document.getElementById('heightInput').value = ''; document.getElementById('weightInput').value = '';
-        showToast('生长数据已保存'); renderDashboard();
+        renderGrowthList();
+        renderDashboard();
       };
+      document.getElementById('cancelGrowthEdit').onclick = cancelEditGrowth;
       document.getElementById('saveBaby').onclick = () => {
         store.saveBaby({ name: document.getElementById('settingName').value.trim(), birth: document.getElementById('settingBirth').value, gender: currentGender() });
         setRecorder(document.getElementById('settingRecorder').value);
