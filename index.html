@@ -448,18 +448,24 @@
       <div id="summaryBody"></div>
       <div class="ai-config-row" id="aiConfigRow">
         <div class="form-row" style="margin-bottom:8px;">
-          <label>API Key（Kimi / Moonshot 等平台，仅存本机）</label>
+          <label>接口地址（OpenAI 兼容，留空默认 Kimi）</label>
+          <input type="text" id="aiEndpoint" placeholder="https://api.moonshot.cn/v1">
+        </div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <label>API Key（只存本机，不会上传）</label>
           <input type="password" id="aiApiKey" placeholder="sk-...">
         </div>
         <div class="form-row" style="margin-bottom:8px;">
           <label>模型</label>
           <input type="text" id="aiModel" placeholder="moonshot-v1-8k">
         </div>
-        <p style="font-size:12px;color:var(--text-light);margin:0 0 8px;line-height:1.5;">Key 获取：platform.moonshot.cn（Kimi 开放平台）→ API Key 管理。接口兼容 OpenAI 格式。</p>
+        <p style="font-size:12px;color:var(--text-light);margin:0 0 8px;line-height:1.5;">Kimi Key 获取：platform.moonshot.cn → 「API Key 管理」→ 新建。注意是开发者平台，不是 kimi.com 普通账号。DeepSeek 等平台同理，需把接口地址改为对应地址。</p>
         <div style="display:flex;gap:8px;">
+          <button class="btn" id="aiTestBtn" type="button" style="flex:1;padding:10px;font-size:14px;background:#fff;color:#4a90d9;box-shadow:none;border:1.5px solid #4a90d9;">🔌 测试连接</button>
           <button class="btn" id="aiSaveConfig" type="button" style="flex:1;padding:10px;font-size:14px;">保存配置</button>
           <button class="btn" id="aiClearConfig" type="button" style="flex:1;padding:10px;font-size:14px;background:#fff;color:#888;box-shadow:none;border:1.5px solid var(--border);">清除</button>
         </div>
+        <div id="aiTestResult" style="margin-top:8px;font-size:13px;"></div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;">
         <button class="btn" id="aiAskBtn" type="button" style="flex:1;padding:11px;font-size:14px;">✨ AI 深度建议</button>
@@ -1896,17 +1902,53 @@
       });
       document.getElementById('aiConfigBtn').onclick = () => document.getElementById('aiConfigRow').classList.toggle('open');
       document.getElementById('aiAskBtn').onclick = askAI;
+      // 回填已存配置
+      const savedCfg = getAIConfig();
+      if (savedCfg.endpoint) document.getElementById('aiEndpoint').value = savedCfg.endpoint;
+      if (savedCfg.apiKey) document.getElementById('aiApiKey').value = savedCfg.apiKey;
+      if (savedCfg.model) document.getElementById('aiModel').value = savedCfg.model;
+      document.getElementById('aiTestBtn').onclick = testAIConnection;
       document.getElementById('aiSaveConfig').onclick = () => {
-        localStorage.setItem(aiConfigKey, JSON.stringify({ apiKey: document.getElementById('aiApiKey').value.trim(), model: document.getElementById('aiModel').value.trim() || 'moonshot-v1-8k' }));
+        localStorage.setItem(aiConfigKey, JSON.stringify({
+          endpoint: document.getElementById('aiEndpoint').value.trim(),
+          apiKey: document.getElementById('aiApiKey').value.trim(),
+          model: document.getElementById('aiModel').value.trim() || 'moonshot-v1-8k'
+        }));
         document.getElementById('aiConfigRow').classList.remove('open');
         showToast('AI 配置已保存');
       };
       document.getElementById('aiClearConfig').onclick = () => {
         localStorage.removeItem(aiConfigKey);
+        document.getElementById('aiEndpoint').value = '';
         document.getElementById('aiApiKey').value = '';
         document.getElementById('aiModel').value = '';
         showToast('已清除');
       };
+    }
+
+    // 测试连接：GET /models 最小调用，当场诊断 Key/地址问题
+    async function testAIConnection() {
+      const resultEl = document.getElementById('aiTestResult');
+      const apiKey = document.getElementById('aiApiKey').value.trim();
+      const endpoint = (document.getElementById('aiEndpoint').value.trim() || 'https://api.moonshot.cn/v1').replace(/\/+$/, '');
+      if (!apiKey) { resultEl.innerHTML = '<span style="color:#ff6b6b;">请先填写 API Key</span>'; return; }
+      resultEl.innerHTML = '<span style="color:var(--text-light);">正在测试…</span>';
+      try {
+        const resp = await fetch(`${endpoint}/models`, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+        if (resp.ok) {
+          const data = await resp.json().catch(() => null);
+          const models = data?.data?.length ? `，可用模型 ${data.data.length} 个` : '';
+          resultEl.innerHTML = `<span style="color:#4DB6AC;">✓ 连接成功，Key 有效${models}</span>`;
+        } else if (resp.status === 401) {
+          resultEl.innerHTML = `<span style="color:#ff6b6b;">✗ 401 Key 无效：请确认是该平台（${endpoint}）创建的 Key，且没有多余空格</span>`;
+        } else if (resp.status === 404) {
+          resultEl.innerHTML = `<span style="color:#ff6b6b;">✗ 404 接口地址不对：应为 .../v1 结尾，如 https://api.moonshot.cn/v1</span>`;
+        } else {
+          resultEl.innerHTML = `<span style="color:#ff6b6b;">✗ 失败：HTTP ${resp.status}</span>`;
+        }
+      } catch (err) {
+        resultEl.innerHTML = `<span style="color:#ff6b6b;">✗ 网络错误：${String(err.message || err)}（浏览器跨域需平台支持）</span>`;
+      }
     }
 
     const defaultVaccineSchedule = [
