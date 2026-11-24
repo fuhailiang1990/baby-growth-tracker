@@ -1735,6 +1735,7 @@
     }
 
     let vaccineRestOpen = false;
+    let vaccineEditingId = null;
     function renderVaccines() {
       ensureVaccines();
       const d = store.get();
@@ -1742,6 +1743,20 @@
       const months = ageMonths(baby?.birth);
       const vaccines = d.vaccines || [];
       const rowHtml = v => {
+        // 日期编辑态
+        if (vaccineEditingId === v.id) {
+          return `<div class="milestone" style="align-items:center;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:500;">${v.name}</div>
+              <div style="font-size:12px;color:var(--text-light);margin-top:2px;">${v.dose} · 选择接种日期</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+              <input type="date" id="vaccineDate_${v.id}" value="${v.date || todayStr()}" style="width:130px;padding:7px 8px;font-size:13px;">
+              <button class="tag" data-id="${v.id}" data-act="save" style="background:var(--primary-dark);color:#fff;border-color:var(--primary-dark);">✓</button>
+              <button class="tag" data-id="${v.id}" data-act="cancel" style="background:#fff;color:#888;border-color:var(--border);">✕</button>
+            </div>
+          </div>`;
+        }
         const isDue = months !== null && v.months <= months && !v.done;
         const soon = months !== null && v.months <= months + 1 && v.months > months && !v.done;
         const statusColor = v.done ? '#4DB6AC' : isDue ? '#ff6b6b' : soon ? '#ff9800' : '#888';
@@ -1751,7 +1766,9 @@
             <div style="font-size:14px;font-weight:500;">${v.name}</div>
             <div style="font-size:12px;color:var(--text-light);margin-top:2px;">${v.dose} · ${statusText}</div>
           </div>
-          ${v.done ? `<button class="tag" data-id="${v.id}" data-done="undo" style="background:#fff;color:#ff6b6b;border-color:#ff6b6b;">撤销</button>` : `<button class="tag" data-id="${v.id}" data-done="do" style="background:${statusColor};color:#fff;border-color:${statusColor};">登记</button>`}
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+            ${v.done ? `<button class="tag" data-id="${v.id}" data-act="editdate" title="修改接种日期" style="background:#fff;color:#4a90d9;border-color:#4a90d9;">✏️ 日期</button><button class="tag" data-id="${v.id}" data-act="undo" style="background:#fff;color:#ff6b6b;border-color:#ff6b6b;">撤销</button>` : `<button class="tag" data-id="${v.id}" data-act="do" style="background:${statusColor};color:#fff;border-color:${statusColor};">登记</button>`}
+          </div>
         </div>`;
       };
       const dueSoon = vaccines.filter(v => !v.done && (months !== null && v.months <= months + 1));
@@ -1770,7 +1787,23 @@
       else if (toggleBtn) toggleBtn.style.display = 'none';
       listEl.querySelectorAll('button[data-id]').forEach(btn => btn.onclick = () => {
         const id = Number(btn.dataset.id);
-        const vaccines = store.get().vaccines.map(v => v.id === id ? { ...v, done: btn.dataset.done === 'do', date: btn.dataset.done === 'do' ? todayStr() : '' } : v);
+        const act = btn.dataset.act;
+        if (act === 'editdate' || act === 'cancel') {
+          vaccineEditingId = act === 'editdate' ? id : null;
+          renderVaccines();
+          return;
+        }
+        if (act === 'save') {
+          const dateInput = document.getElementById('vaccineDate_' + id);
+          const date = dateInput?.value || todayStr();
+          const vaccines = store.get().vaccines.map(v => v.id === id ? { ...v, done: true, date } : v);
+          vaccineEditingId = null;
+          store.saveVaccines(vaccines);
+          renderVaccines();
+          return;
+        }
+        // do / undo
+        const vaccines = store.get().vaccines.map(v => v.id === id ? { ...v, done: act === 'do', date: act === 'do' ? todayStr() : '' } : v);
         store.saveVaccines(vaccines);
         renderVaccines();
       });
