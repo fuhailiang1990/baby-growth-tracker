@@ -806,7 +806,11 @@
     }
 
     // ================= Helpers =================
-    function formatDate(d) { return new Date(d).toISOString().split('T')[0]; }
+    // 本地时区格式化（toISOString 会把 UTC+8 凌晨 0-8 点的日期算到前一天）
+    function formatDate(d) {
+      const p = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    }
     function todayStr() { return formatDate(new Date()); }
     function minutesFromTime(t) { if (!t) return 0; const [h, m] = t.split(':'); return (Number(h) || 0) * 60 + (Number(m) || 0); }
     function sleepMinutes(start, end) {
@@ -1751,8 +1755,8 @@
               <div style="font-size:12px;color:var(--text-light);margin-top:2px;">${v.dose} · 选择接种日期</div>
             </div>
             <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-              <input type="date" id="vaccineDate_${v.id}" value="${v.date || todayStr()}" style="width:130px;padding:7px 8px;font-size:13px;">
-              <button class="tag" data-id="${v.id}" data-act="save" style="background:var(--primary-dark);color:#fff;border-color:var(--primary-dark);">✓</button>
+              <input type="date" id="vaccineDate_${v.id}" value="${v.date || todayStr()}" style="width:118px;padding:7px 6px;font-size:13px;flex-shrink:0;">
+              <button class="tag" data-id="${v.id}" data-act="save" style="background:var(--primary-dark);color:#fff;border-color:var(--primary-dark);">保存</button>
               <button class="tag" data-id="${v.id}" data-act="cancel" style="background:#fff;color:#888;border-color:var(--border);">✕</button>
             </div>
           </div>`;
@@ -1767,7 +1771,7 @@
             <div style="font-size:12px;color:var(--text-light);margin-top:2px;">${v.dose} · ${statusText}</div>
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-            ${v.done ? `<button class="tag" data-id="${v.id}" data-act="editdate" title="修改接种日期" style="background:#fff;color:#4a90d9;border-color:#4a90d9;">✏️ 日期</button><button class="tag" data-id="${v.id}" data-act="undo" style="background:#fff;color:#ff6b6b;border-color:#ff6b6b;">撤销</button>` : `<button class="tag" data-id="${v.id}" data-act="do" style="background:${statusColor};color:#fff;border-color:${statusColor};">登记</button>`}
+            ${v.done ? `<button class="tag" data-id="${v.id}" data-act="editdate" title="修改接种日期" style="background:#fff;color:#4a90d9;border-color:#4a90d9;">✏️ 日期</button><button class="tag" data-id="${v.id}" data-act="undo" style="background:#fff;color:#ff6b6b;border-color:#ff6b6b;">撤销</button>` : `<button class="tag" data-id="${v.id}" data-act="do" style="background:${statusColor};color:#fff;border-color:${statusColor};">登记</button><button class="tag" data-id="${v.id}" data-act="editdate" title="选日期登记（补录）" style="background:#fff;color:#ff9800;border-color:#ff9800;">📅</button>`}
           </div>
         </div>`;
       };
@@ -1806,6 +1810,7 @@
         const vaccines = store.get().vaccines.map(v => v.id === id ? { ...v, done: act === 'do', date: act === 'do' ? todayStr() : '' } : v);
         store.saveVaccines(vaccines);
         renderVaccines();
+        if (act === 'do') showToast('已登记为今天，「📅」可选日期补录');
       });
     }
 
