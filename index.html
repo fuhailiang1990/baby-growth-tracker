@@ -437,42 +437,6 @@
       <div class="stat-card"><div class="stat-value" id="statMed">0</div><div class="stat-label">用药次数</div></div>
     </div>
 
-    <!-- 智能综述（时间×类别打通 + AI 建议） -->
-    <div class="card" id="sec-summary">
-      <h2 class="card-title">🧠 智能综述</h2>
-      <div class="segmented" id="summaryRange" style="margin-bottom:12px;">
-        <button data-days="3">近3天</button>
-        <button class="active" data-days="7">近7天</button>
-        <button data-days="30">近30天</button>
-      </div>
-      <div id="summaryBody"></div>
-      <div class="ai-config-row" id="aiConfigRow">
-        <div class="form-row" style="margin-bottom:8px;">
-          <label>接口地址（OpenAI 兼容，留空默认 Kimi）</label>
-          <input type="text" id="aiEndpoint" placeholder="https://api.moonshot.cn/v1">
-        </div>
-        <div class="form-row" style="margin-bottom:8px;">
-          <label>API Key（只存本机，不会上传）</label>
-          <input type="password" id="aiApiKey" placeholder="sk-...">
-        </div>
-        <div class="form-row" style="margin-bottom:8px;">
-          <label>模型</label>
-          <input type="text" id="aiModel" placeholder="moonshot-v1-8k">
-        </div>
-        <p style="font-size:12px;color:var(--text-light);margin:0 0 8px;line-height:1.5;">Kimi Key 获取：platform.moonshot.cn → 「API Key 管理」→ 新建。注意是开发者平台，不是 kimi.com 普通账号。DeepSeek 等平台同理，需把接口地址改为对应地址。</p>
-        <div style="display:flex;gap:8px;">
-          <button class="btn" id="aiTestBtn" type="button" style="flex:1;padding:10px;font-size:14px;background:#fff;color:#4a90d9;box-shadow:none;border:1.5px solid #4a90d9;">🔌 测试连接</button>
-          <button class="btn" id="aiSaveConfig" type="button" style="flex:1;padding:10px;font-size:14px;">保存配置</button>
-          <button class="btn" id="aiClearConfig" type="button" style="flex:1;padding:10px;font-size:14px;background:#fff;color:#888;box-shadow:none;border:1.5px solid var(--border);">清除</button>
-        </div>
-        <div id="aiTestResult" style="margin-top:8px;font-size:13px;"></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;">
-        <button class="btn" id="aiAskBtn" type="button" style="flex:1;padding:11px;font-size:14px;">✨ AI 深度建议</button>
-        <button class="btn" id="aiConfigBtn" type="button" style="padding:11px 14px;font-size:14px;background:#fff;color:var(--primary-dark);box-shadow:none;border:1.5px solid var(--border);">⚙️</button>
-      </div>
-      <div id="aiResultBox"></div>
-    </div>
 
     <div class="card" id="sec-growth">
       <h2 class="card-title">📏 生长曲线</h2>
@@ -537,6 +501,43 @@
       <div id="stageSummary"></div>
     </div>
     <div id="suggestionCards"></div>
+
+    <!-- 智能综述（时间×类别打通 + AI 建议） -->
+    <div class="card" id="sec-summary">
+      <h2 class="card-title">🧠 智能综述</h2>
+      <div class="segmented" id="summaryRange" style="margin-bottom:12px;">
+        <button data-days="3">近3天</button>
+        <button class="active" data-days="7">近7天</button>
+        <button data-days="30">近30天</button>
+      </div>
+      <div id="summaryBody"></div>
+      <div class="ai-config-row" id="aiConfigRow">
+        <div class="form-row" style="margin-bottom:8px;">
+          <label>接口地址（OpenAI 兼容，留空默认 Kimi）</label>
+          <input type="text" id="aiEndpoint" placeholder="https://api.moonshot.cn/v1">
+        </div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <label>API Key（只存本机，不会上传）</label>
+          <input type="password" id="aiApiKey" placeholder="sk-...">
+        </div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <label>模型</label>
+          <input type="text" id="aiModel" placeholder="moonshot-v1-8k">
+        </div>
+        <p style="font-size:12px;color:var(--text-light);margin:0 0 8px;line-height:1.5;">Kimi Key 获取：platform.moonshot.cn → 「API Key 管理」→ 新建。注意是开发者平台，不是 kimi.com 普通账号。DeepSeek 等平台同理，需把接口地址改为对应地址。</p>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" id="aiTestBtn" type="button" style="flex:1;padding:10px;font-size:14px;background:#fff;color:#4a90d9;box-shadow:none;border:1.5px solid #4a90d9;">🔌 测试连接</button>
+          <button class="btn" id="aiSaveConfig" type="button" style="flex:1;padding:10px;font-size:14px;">保存配置</button>
+          <button class="btn" id="aiClearConfig" type="button" style="flex:1;padding:10px;font-size:14px;background:#fff;color:#888;box-shadow:none;border:1.5px solid var(--border);">清除</button>
+        </div>
+        <div id="aiTestResult" style="margin-top:8px;font-size:13px;"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn" id="aiAskBtn" type="button" style="flex:1;padding:11px;font-size:14px;">✨ AI 深度建议</button>
+        <button class="btn" id="aiConfigBtn" type="button" style="padding:11px 14px;font-size:14px;background:#fff;color:var(--primary-dark);box-shadow:none;border:1.5px solid var(--border);">⚙️</button>
+      </div>
+      <div id="aiResultBox"></div>
+    </div>
     <div class="card" id="sec-milestones">
       <h2 class="card-title">🌟 发育里程碑</h2>
       <p style="font-size:13px;color:var(--text-light);margin:0 0 12px;line-height:1.5;">各月龄典型发育参考（个体差异可达 1-2 个月，稍早稍晚都正常）。已记录过的里程碑会自动打勾。</p>
@@ -2536,7 +2537,6 @@
       ]},
       { page: 'page-dashboard', icon: '📊', label: '成长', children: [
         { id: 'sec-overview', icon: '📌', label: '今日概览' },
-        { id: 'sec-summary', icon: '🧠', label: '智能综述' },
         { id: 'sec-growth', icon: '📈', label: '生长曲线' },
         { id: 'sec-vaccine', icon: '💉', label: '疫苗计划' },
         { id: 'sec-skills', icon: '🌟', label: '新技能' },
@@ -2545,6 +2545,7 @@
       ]},
       { page: 'page-tips', icon: '💡', label: '建议', children: [
         { id: 'sec-stage', icon: '🎯', label: '当前阶段重点' },
+        { id: 'sec-summary', icon: '🧠', label: '智能综述' },
         { id: 'sec-milestones', icon: '🌟', label: '发育里程碑' }
       ]},
       { page: 'page-album', icon: '📷', label: '相册', children: [
@@ -2612,7 +2613,7 @@
       const bottomBtn = document.querySelector(`.tab-bar .tab-btn[data-page="${pageId}"]`);
       if (bottomBtn) bottomBtn.classList.add('active');
       if (pageId === 'page-dashboard') { renderDashboard(); renderGrowthCharts(); renderExtraSections(); }
-      if (pageId === 'page-tips') renderTips();
+      if (pageId === 'page-tips') { renderTips(); renderSummary(); }
       if (pageId === 'page-album') renderAlbum();
       if (pageId === 'page-history') renderHistory();
       if (pageId === 'page-settings') { updateBabyInfo(); updateReminderInputs(); renderTimeline(); }
@@ -2676,6 +2677,15 @@
         // 信息型板块默认折叠
         ['sec-growth', 'sec-vaccine', 'sec-skills', 'sec-emotions', 'sec-exercise', 'sec-milestones'].forEach(makeCollapsible);
         bindSummaryControls();
+        // URL 一键配置 AI：#ai=<apiKey>[,接口地址][,模型]（配置后自动清除 hash）
+        (function applyAIHash() {
+          const m = location.hash.match(/^#ai=([^,]+)(?:,([^,]*))?(?:,([^,]*))?/);
+          if (!m) return;
+          const cfg = { apiKey: decodeURIComponent(m[1]), endpoint: m[2] ? decodeURIComponent(m[2]) : '', model: m[3] ? decodeURIComponent(m[3]) : 'moonshot-v1-8k' };
+          localStorage.setItem(aiConfigKey, JSON.stringify(cfg));
+          history.replaceState(null, '', location.pathname + location.search);
+          showToast('AI 配置成功 ✓');
+        })();
         renderHeaderReminders();
       } catch (e) {
         console.error('Init render failed', e);
