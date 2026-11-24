@@ -52,7 +52,7 @@
     .app-header h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
     .baby-info { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; font-size: 13px; opacity: 0.95; }
     .baby-info span { background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; }
-    .tab-bar { position: fixed; bottom: 0; left: 0; width: 100vw; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); overflow-x: auto; background: rgba(255,255,255,0.96); backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: 8px 0 calc(8px + var(--safe-bottom)); z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.05); }
+    .tab-bar { position: fixed; bottom: 0; left: 0; width: 100vw; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); overflow-x: auto; background: rgba(255,255,255,0.96); backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: 8px 0 calc(8px + var(--safe-bottom)); z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.05); }
     .tab-btn { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: none; border: none; color: var(--text-light); font-size: 9px; padding: 4px 0; cursor: pointer; transition: all 0.2s; }
     .tab-btn .icon { font-size: 18px; line-height: 1; }
     .tab-btn.active { color: var(--primary-dark); transform: scale(1.05); }
@@ -77,12 +77,21 @@
     .tab-btn { min-height: 54px; }
     .segmented button { min-height: 40px; }
     .tag { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+    .hist-day-header { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 8px; gap: 10px; }
+    .hist-day-header:first-child { margin-top: 0; }
+    .hist-day-header > div:first-child { min-width: 0; flex: 1; }
+    .hist-day-title { font-size: 15px; font-weight: 700; color: var(--primary-dark); }
+    .hist-day-sub { font-size: 12px; color: var(--text-light); margin-top: 2px; word-break: keep-all; }
+    .hist-day-sub .stat { white-space: nowrap; }
+    .hist-goto { font-size: 12px; color: #4a90d9; background: none; border: 1px solid #4a90d9; border-radius: 16px; padding: 5px 12px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+    .hist-more { display: block; width: 100%; margin-top: 14px; padding: 12px; border: 1.5px dashed var(--border); border-radius: 12px; background: var(--bg); color: var(--primary-dark); font-size: 14px; cursor: pointer; }
+
     .record-item .delete { padding: 8px; margin: -4px; }
     .milestone .check { width: 28px; height: 28px; min-width: 28px; min-height: 28px; }
     .records-list { display: flex; flex-direction: column; gap: 10px; }
     .record-item { background: var(--bg); border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
     .record-item .time { font-size: 13px; color: var(--text-light); min-width: 46px; }
-    .record-item .content { flex: 1; padding: 0 10px; font-size: 14px; }
+    .record-item .content { flex: 1; padding: 0 10px; font-size: 14px; word-break: keep-all; }
     .record-item .icon { font-size: 20px; }
     .record-item .delete { color: #ff6b6b; font-size: 18px; cursor: pointer; padding: 4px; }
     .record-item .edit { color: #4a90d9; font-size: 18px; cursor: pointer; padding: 4px; }
@@ -301,6 +310,61 @@
     </div>
   </section>
 
+  <!-- 历史查询 -->
+  <section class="page" id="page-history">
+    <div class="card" id="sec-history-filter">
+      <h2 class="card-title">🔍 查询条件</h2>
+      <div class="segmented" id="histRange" style="margin-bottom:12px;">
+        <button class="active" data-range="all">全部</button>
+        <button data-range="7">近7天</button>
+        <button data-range="30">近30天</button>
+        <button data-range="90">近90天</button>
+      </div>
+      <div class="form-row" style="margin-bottom:0;">
+        <label>自定义区间</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="date" id="histStart" style="flex:1;min-width:0;">
+          <span style="color:var(--text-light);font-size:13px;">至</span>
+          <input type="date" id="histEnd" style="flex:1;min-width:0;">
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="sec-history-cats">
+      <h2 class="card-title">🏷️ 记录类型</h2>
+      <div id="histCats" style="display:flex;flex-wrap:wrap;gap:8px;">
+        <span class="tag active" data-cat="all" style="border-color:var(--primary-dark);color:var(--primary-dark);">全部</span>
+        <span class="tag" data-cat="milk">🍼 吃奶</span>
+        <span class="tag" data-cat="food">🥄 辅食</span>
+        <span class="tag" data-cat="water">💧 喝水</span>
+        <span class="tag" data-cat="pee">💦 小便</span>
+        <span class="tag" data-cat="poop">💩 大便</span>
+        <span class="tag" data-cat="sleep">💤 睡眠</span>
+        <span class="tag" data-cat="supplement">💊 营养品</span>
+        <span class="tag" data-cat="medicine">🩹 药品</span>
+        <span class="tag" data-cat="foodtry">🥣 新食物</span>
+      </div>
+    </div>
+
+    <div class="card" id="sec-history-kw">
+      <h2 class="card-title">🔎 关键词搜索</h2>
+      <div class="form-row" style="margin-bottom:10px;">
+        <input type="text" id="histKw" placeholder="搜索食物 / 药品 / 备注内容…">
+      </div>
+      <button class="btn" id="histExport" type="button">⬇️ 导出当前结果 CSV</button>
+    </div>
+
+    <div class="card" id="sec-history-summary">
+      <h2 class="card-title">📈 结果汇总</h2>
+      <div id="histSummary"></div>
+    </div>
+
+    <div class="card" id="sec-history-list">
+      <h2 class="card-title">📜 历史记录</h2>
+      <div id="histList"></div>
+    </div>
+  </section>
+
   <!-- 成长数据 -->
   <section class="page" id="page-dashboard">
     <div class="dashboard-grid" id="sec-overview">
@@ -503,7 +567,8 @@
   </div>
 
   <nav class="tab-bar">
-    <button class="tab-btn active" data-page="page-record"><span class="icon">📝</span><span>记录</span></button>
+    <button class="tab-btn" data-page="page-record"><span class="icon">📝</span><span>记录</span></button>
+    <button class="tab-btn" data-page="page-history"><span class="icon">📜</span><span>历史</span></button>
     <button class="tab-btn" data-page="page-dashboard"><span class="icon">📊</span><span>成长</span></button>
     <button class="tab-btn" data-page="page-tips"><span class="icon">💡</span><span>建议</span></button>
     <button class="tab-btn" data-page="page-album"><span class="icon">📷</span><span>相册</span></button>
@@ -701,6 +766,7 @@
       renderTips();
       renderTimeline();
       renderAlbum();
+      renderHistory();
     }
 
     // ================= Helpers =================
@@ -730,6 +796,30 @@
       const m = ageMonths(birth);
       const d = days - m * 30;
       return `${m}个月${d}天`;
+    }
+    // 指定日期时的月龄（用于历史按天展示）
+    function ageTextOn(birth, dateStr) {
+      if (!birth || !dateStr) return '';
+      const b = new Date(birth + 'T00:00:00'), d = new Date(dateStr + 'T00:00:00');
+      if (isNaN(b) || isNaN(d) || d < b) return '';
+      const days = Math.floor((d - b) / 86400000);
+      if (days < 30) return `${days}天`;
+      const bm = b.getFullYear() * 12 + b.getMonth(), dm = d.getFullYear() * 12 + d.getMonth();
+      let months = dm - bm;
+      if (d.getDate() < b.getDate()) months--;
+      months = Math.max(0, months);
+      return `${months}个月${days - months * 30}天`;
+    }
+    function weekdayCN(dateStr) {
+      const wd = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      const d = new Date(dateStr + 'T00:00:00');
+      return isNaN(d) ? '' : wd[d.getDay()];
+    }
+    function fmtMin(min) {
+      if (!min || min <= 0) return '0分钟';
+      if (min < 60) return `${min}分钟`;
+      const h = Math.floor(min / 60), m = min % 60;
+      return m ? `${h}小时${m}分` : `${h}小时`;
     }
 
     // ================= Pages =================
@@ -884,6 +974,203 @@
     }
 
     function renderAllSubLists() { Object.keys(SUB_FORMS).forEach(renderSubList); }
+
+    // ================= 历史查询 =================
+    const HISTORY_CATS = [...DAILY_CATS, ...Object.keys(SUB_FORMS)];
+    const histState = { range: 'all', cat: 'all', kw: '', start: '', end: '', limit: 10 };
+
+    // 记录详情文本（与记录页列表同一套拼接逻辑）
+    function histDetailText(r) {
+      const parts = [];
+      if (!DAILY_CATS.includes(r.category)) {
+        if (r.name) parts.unshift(r.name);
+        if (r.dose) parts.push(r.dose);
+        if (r.reason) parts.push(r.reason);
+      }
+      if (r.type) parts.push(r.type);
+      if (r.amount) parts.push(r.amount + (r.category === 'milk' || r.category === 'water' ? 'ml' : ''));
+      if (r.duration) parts.push(r.duration + '分钟');
+      if (r.start && r.end) parts.push(`${r.start}-${r.end}`);
+      else if (r.start) parts.push(`从${r.start}`);
+      if (r.quality) parts.push(r.quality);
+      if (r.food) parts.push(r.food);
+      if (r.reaction) parts.push(r.reaction);
+      if (r.note) parts.push(r.note);
+      if (r.color) parts.push(r.color);
+      return parts.join(' · ') || '--';
+    }
+
+    function histKeywordHit(r, kw) {
+      if (!kw) return true;
+      const hay = [r.name, r.dose, r.reason, r.food, r.note, r.color, r.reaction, r.type, r.quality, r.amount, r.duration, r.start, r.end].filter(Boolean).join(' ');
+      return hay.toLowerCase().includes(kw.toLowerCase());
+    }
+
+    function histFiltered() {
+      const today = todayStr();
+      let start = histState.start, end = histState.end;
+      if (!start && !end && histState.range !== 'all') {
+        const d = new Date();
+        d.setDate(d.getDate() - (Number(histState.range) - 1));
+        start = formatDate(d);
+        end = today;
+      }
+      return (store.get().records || [])
+        .filter(r => !histState.cat || histState.cat === 'all' || r.category === histState.cat)
+        .filter(r => !start || r.date >= start)
+        .filter(r => !end || r.date <= end)
+        .filter(r => histKeywordHit(r, histState.kw))
+        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : minutesFromTime(a.time) - minutesFromTime(b.time)));
+    }
+
+    function histDaySummary(dayRecs) {
+      const s = [];
+      const milk = dayRecs.filter(r => r.category === 'milk').reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const water = dayRecs.filter(r => r.category === 'water').reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const food = dayRecs.filter(r => r.category === 'food').length;
+      const sleepMin = dayRecs.filter(r => r.category === 'sleep').reduce((sum, r) => sum + sleepMinutes(r.start, r.end), 0);
+      const pee = dayRecs.filter(r => r.category === 'pee').length;
+      const poop = dayRecs.filter(r => r.category === 'poop').length;
+      if (milk) s.push(`🍼 ${milk}ml`);
+      if (food) s.push(`🥄 辅食${food}次`);
+      if (water) s.push(`💧 ${water}ml`);
+      if (sleepMin) s.push(`💤 ${fmtMin(sleepMin)}`);
+      if (pee) s.push(`💦×${pee}`);
+      if (poop) s.push(`💩×${poop}`);
+      const supp = dayRecs.filter(r => r.category === 'supplement').length;
+      const med = dayRecs.filter(r => r.category === 'medicine').length;
+      if (supp) s.push(`💊×${supp}`);
+      if (med) s.push(`🩹×${med}`);
+      return s.map(x => `<span class="stat">${x}</span>`).join(' · ');
+    }
+
+    function renderHistory() {
+      const listEl = document.getElementById('histList');
+      const summaryEl = document.getElementById('histSummary');
+      if (!listEl) return;
+      const recs = histFiltered();
+      // 汇总统计
+      const days = new Set(recs.map(r => r.date));
+      const milkTotal = recs.filter(r => r.category === 'milk').reduce((s, r) => s + Number(r.amount || 0), 0);
+      const milkDays = new Set(recs.filter(r => r.category === 'milk').map(r => r.date)).size;
+      summaryEl.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <span class="tag" style="cursor:default;">📋 共 ${recs.length} 条</span>
+        <span class="tag" style="cursor:default;">📅 ${days.size} 天</span>
+        ${milkTotal ? `<span class="tag" style="cursor:default;">🍼 奶量合计 ${milkTotal}ml${milkDays ? `（日均 ${Math.round(milkTotal / milkDays)}ml）` : ''}</span>` : ''}
+      </div>`;
+      if (!recs.length) { listEl.innerHTML = '<div class="empty-tip">没有符合条件的历史记录~</div>'; return; }
+      // 按天分组（倒序）
+      const groups = {};
+      recs.forEach(r => { (groups[r.date] = groups[r.date] || []).push(r); });
+      const dates = Object.keys(groups).sort().reverse();
+      const shown = dates.slice(0, histState.limit);
+      const birth = store.get().baby?.birth;
+      listEl.innerHTML = shown.map(date => {
+        const dayRecs = groups[date];
+        const age = ageTextOn(birth, date);
+        const isToday = date === todayStr();
+        const rows = dayRecs.map(r => {
+          const who = r.recordedBy ? `<span style="font-size:11px;color:var(--text-light);margin-left:6px;">@${r.recordedBy}</span>` : '';
+          return `<div class="record-item">
+            <span class="time">${r.time || r.start || '--:--'}</span>
+            <span class="content"><span class="icon">${iconFor(r.category)}</span> ${histDetailText(r)}${who}</span>
+            <span class="edit" data-id="${r.id}">✏️</span>
+            <span class="delete" data-id="${r.id}">🗑</span>
+          </div>`;
+        }).join('');
+        return `<div class="hist-day-header">
+            <div>
+              <div class="hist-day-title">${date.slice(5).replace('-', '月')}日 ${weekdayCN(date)}${isToday ? ' · 今天' : ''}</div>
+              <div class="hist-day-sub">${age ? '👶 ' + age : ''}${age && histDaySummary(dayRecs) ? ' · ' : ''}${histDaySummary(dayRecs)}</div>
+            </div>
+            <button class="hist-goto" data-date="${date}" type="button">去记录 ›</button>
+          </div>
+          <div class="records-list">${rows}</div>`;
+      }).join('') + (dates.length > shown.length
+        ? `<button class="hist-more" id="histMoreBtn" type="button">展开剩余 ${dates.length - shown.length} 天 ›</button>`
+        : '');
+      // 交互绑定
+      listEl.querySelectorAll('.edit').forEach(btn => btn.onclick = () => {
+        switchPage('page-record');
+        startEditRecord(Number(btn.dataset.id));
+      });
+      listEl.querySelectorAll('.delete').forEach(btn => btn.onclick = () => {
+        const rid = Number(btn.dataset.id);
+        if (editingRecordId === rid) cancelEdit();
+        if (!confirm('确定删除这条记录吗？')) return;
+        store.delRecord(rid);
+        renderAll();
+      });
+      listEl.querySelectorAll('.hist-goto').forEach(btn => btn.onclick = () => {
+        document.getElementById('recordDate').value = btn.dataset.date;
+        switchPage('page-record');
+        renderTodayRecords();
+        renderAllSubLists();
+        renderDashboard();
+      });
+      const moreBtn = document.getElementById('histMoreBtn');
+      if (moreBtn) moreBtn.onclick = () => { histState.limit = Infinity; renderHistory(); };
+    }
+
+    function bindHistoryFilters() {
+      document.querySelectorAll('#histRange button').forEach(btn => btn.onclick = () => {
+        document.querySelectorAll('#histRange button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        histState.range = btn.dataset.range;
+        // 快捷区间与自定义区间互斥：选快捷区间时清空自定义日期
+        if (histState.range !== 'all') {
+          histState.start = histState.end = '';
+          document.getElementById('histStart').value = '';
+          document.getElementById('histEnd').value = '';
+        }
+        histState.limit = 10;
+        renderHistory();
+      });
+      document.getElementById('histStart').onchange = e => {
+        histState.start = e.target.value;
+        if (histState.start || histState.end) {
+          histState.range = 'custom';
+          document.querySelectorAll('#histRange button').forEach(b => b.classList.remove('active'));
+        } else { histState.range = 'all'; document.querySelector('#histRange button[data-range="all"]').classList.add('active'); }
+        histState.limit = 10;
+        renderHistory();
+      };
+      document.getElementById('histEnd').onchange = e => {
+        histState.end = e.target.value;
+        if (histState.start || histState.end) {
+          histState.range = 'custom';
+          document.querySelectorAll('#histRange button').forEach(b => b.classList.remove('active'));
+        } else { histState.range = 'all'; document.querySelector('#histRange button[data-range="all"]').classList.add('active'); }
+        histState.limit = 10;
+        renderHistory();
+      };
+      document.querySelectorAll('#histCats .tag').forEach(tag => tag.onclick = () => {
+        document.querySelectorAll('#histCats .tag').forEach(t => t.classList.remove('active'));
+        tag.classList.add('active');
+        histState.cat = tag.dataset.cat;
+        histState.limit = 10;
+        renderHistory();
+      });
+      document.getElementById('histKw').oninput = e => { histState.kw = e.target.value.trim(); histState.limit = 10; renderHistory(); };
+      document.getElementById('histExport').onclick = exportHistoryCSV;
+    }
+
+    function exportHistoryCSV() {
+      const recs = histFiltered();
+      if (!recs.length) { showToast('没有可导出的记录'); return; }
+      const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const rows = [
+        ['日期', '星期', '时间', '类型', '内容', '记录人'].map(esc).join(','),
+        ...recs.map(r => [r.date, weekdayCN(r.date), r.time || r.start || '', titleFor(r.category), histDetailText(r), r.recordedBy || ''].map(esc).join(','))
+      ];
+      const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `宝宝成长记录_${todayStr()}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast(`已导出 ${recs.length} 条`);
+    }
 
     // ================= 记录编辑 / 生长数据编辑 =================
     let editingRecordId = null;
@@ -1782,6 +2069,11 @@
         { id: 'sec-foodtry-form', icon: '🥣', label: '新食物' },
         { id: 'sec-today-list', icon: '📋', label: '今日记录' }
       ]},
+      { page: 'page-history', icon: '📜', label: '历史', children: [
+        { id: 'sec-history-filter', icon: '🔍', label: '查询条件' },
+        { id: 'sec-history-cats', icon: '🏷️', label: '记录类型' },
+        { id: 'sec-history-list', icon: '📜', label: '历史记录' }
+      ]},
       { page: 'page-dashboard', icon: '📊', label: '成长', children: [
         { id: 'sec-overview', icon: '📌', label: '今日概览' },
         { id: 'sec-reminders', icon: '⏰', label: '下次提醒' },
@@ -1862,6 +2154,7 @@
       if (pageId === 'page-dashboard') { renderDashboard(); renderGrowthCharts(); renderExtraSections(); }
       if (pageId === 'page-tips') renderTips();
       if (pageId === 'page-album') renderAlbum();
+      if (pageId === 'page-history') renderHistory();
       if (pageId === 'page-settings') { updateBabyInfo(); updateReminderInputs(); renderTimeline(); }
       renderSideNav();
       renderSubNavBar();
@@ -1897,6 +2190,7 @@
         renderDashboard();
         renderTips();
         renderTimeline();
+        renderHistory();
       } catch (e) {
         console.error('Init render failed', e);
         showError('页面初始化渲染失败：' + e.message + '。底部菜单仍可点击，请尝试刷新或清除缓存。');
@@ -1904,6 +2198,9 @@
 
       // Tab switching（底部标签栏；边栏多级导航由 renderSideNav 绑定）
       document.querySelectorAll('.tab-bar .tab-btn').forEach(btn => btn.onclick = () => switchPage(btn.dataset.page));
+
+      // 历史页筛选器
+      bindHistoryFilters();
 
       // 记录页二级子页面切换
       document.querySelectorAll('#recordSubTabs button').forEach(btn => btn.onclick = () => activateRecordSub(btn.dataset.sub));
