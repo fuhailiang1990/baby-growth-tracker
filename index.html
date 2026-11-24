@@ -102,6 +102,13 @@
     .hist-filter-summary .tag { cursor: default; font-size: 12px; padding: 4px 10px; min-height: 0; }
     .hist-export-btns { display: flex; flex-direction: column; gap: 10px; }
 
+    /* 可折叠板块：默认收起，点标题展开 */
+    .card.collapsible > .card-title { cursor: pointer; user-select: none; -webkit-user-select: none; }
+    .card.collapsible > .card-title .collapse-caret { margin-left: auto; font-size: 12px; color: var(--text-light); transition: transform 0.2s; flex-shrink: 0; }
+    .card.collapsed > *:not(.card-title) { display: none; }
+    .card.collapsed > .card-title .collapse-caret { transform: rotate(-90deg); }
+    .vaccine-toggle-btn { display: block; width: 100%; margin-top: 10px; padding: 9px; border: 1.5px dashed var(--border); border-radius: 10px; background: var(--bg); color: var(--text-light); font-size: 13px; cursor: pointer; }
+
     .record-item .delete { padding: 8px; margin: -4px; }
     .milestone .check { width: 28px; height: 28px; min-width: 28px; min-height: 28px; }
     .records-list { display: flex; flex-direction: column; gap: 10px; }
@@ -1727,18 +1734,14 @@
       }
     }
 
+    let vaccineRestOpen = false;
     function renderVaccines() {
       ensureVaccines();
       const d = store.get();
       const baby = d.baby;
       const months = ageMonths(baby?.birth);
       const vaccines = d.vaccines || [];
-      const dueSoon = vaccines.filter(v => !v.done && (months !== null && v.months <= months + 1));
-      const summaryEl = document.getElementById('vaccineSummary');
-      const listEl = document.getElementById('vaccineList');
-      const doneCount = vaccines.filter(v => v.done).length;
-      summaryEl.innerHTML = `<p style="font-size:14px;color:var(--text-light);margin:0 0 10px;">已完成 <strong style="color:var(--primary-dark);">${doneCount}</strong> / ${vaccines.length} 针 · 近期应接种 <strong style="color:#ff6b6b;">${dueSoon.length}</strong> 针</p>`;
-      listEl.innerHTML = vaccines.map(v => {
+      const rowHtml = v => {
         const isDue = months !== null && v.months <= months && !v.done;
         const soon = months !== null && v.months <= months + 1 && v.months > months && !v.done;
         const statusColor = v.done ? '#4DB6AC' : isDue ? '#ff6b6b' : soon ? '#ff9800' : '#888';
@@ -1750,7 +1753,21 @@
           </div>
           ${v.done ? `<button class="tag" data-id="${v.id}" data-done="undo" style="background:#fff;color:#ff6b6b;border-color:#ff6b6b;">撤销</button>` : `<button class="tag" data-id="${v.id}" data-done="do" style="background:${statusColor};color:#fff;border-color:${statusColor};">登记</button>`}
         </div>`;
-      }).join('');
+      };
+      const dueSoon = vaccines.filter(v => !v.done && (months !== null && v.months <= months + 1));
+      const doneCount = vaccines.filter(v => v.done).length;
+      const summaryEl = document.getElementById('vaccineSummary');
+      const listEl = document.getElementById('vaccineList');
+      summaryEl.innerHTML = `<p style="font-size:14px;color:var(--text-light);margin:0 0 10px;">已完成 <strong style="color:var(--primary-dark);">${doneCount}</strong> / ${vaccines.length} 针 · 近期应接种 <strong style="color:#ff6b6b;">${dueSoon.length}</strong> 针</p>`;
+      // 默认只显示近期应接种；其余收进「完整计划」
+      const pending = vaccines.filter(v => !v.done && months !== null && v.months <= months + 1);
+      const rest = vaccines.filter(v => v.done || !(months !== null && v.months <= months + 1));
+      listEl.innerHTML = (pending.length ? pending.map(rowHtml).join('') : '<div class="empty-tip" style="padding:12px 0;">近期没有待接种的疫苗 🎉</div>')
+        + `<button class="vaccine-toggle-btn" id="vaccineToggle" type="button">${vaccineRestOpen ? '▾ 收起完整计划' : `▸ 查看完整计划（${rest.length} 针）`}</button>`
+        + (rest.length ? `<div id="vaccineRest" style="display:${vaccineRestOpen ? 'block' : 'none'};">${rest.map(rowHtml).join('')}</div>` : '');
+      const toggleBtn = document.getElementById('vaccineToggle');
+      if (toggleBtn && rest.length) toggleBtn.onclick = () => { vaccineRestOpen = !vaccineRestOpen; renderVaccines(); };
+      else if (toggleBtn) toggleBtn.style.display = 'none';
       listEl.querySelectorAll('button[data-id]').forEach(btn => btn.onclick = () => {
         const id = Number(btn.dataset.id);
         const vaccines = store.get().vaccines.map(v => v.id === id ? { ...v, done: btn.dataset.done === 'do', date: btn.dataset.done === 'do' ? todayStr() : '' } : v);
@@ -1798,7 +1815,7 @@
           <div style="padding:8px 12px;display:flex;flex-direction:column;gap:6px;">
             ${g.items.map(([icon, text, kw]) => {
               const done = kw && doneText.includes(kw);
-              return `<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:${done ? '#4DB6AC' : 'var(--text)'};"><span>${done ? '✅' : icon}</span<span style="${done ? 'text-decoration:line-through;' : ''}">${text}</span></div>`;
+              return `<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:${done ? '#4DB6AC' : 'var(--text)'};"><span>${done ? '✅' : icon}</span><span style="${done ? 'text-decoration:line-through;' : ''}">${text}</span></div>`;
             }).join('')}
           </div>
         </div>`;
@@ -2320,6 +2337,11 @@
       const targetEl = document.getElementById(secId);
       const subWrap = targetEl ? targetEl.closest('.record-sub') : null;
       if (subWrap) activateRecordSub(subWrap.id.replace('sub-', ''));
+      // 折叠板块：从导航跳转时自动展开
+      if (targetEl && targetEl.classList.contains('collapsed')) {
+        targetEl.classList.remove('collapsed');
+        if (secId === 'sec-growth') setTimeout(renderGrowthCharts, 80);
+      }
       currentSub = secId;
       renderSideNav();
       renderSubNavBar();
@@ -2327,6 +2349,23 @@
         const el = document.getElementById(secId);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 80);
+    }
+
+    // 板块折叠：默认收起，点标题展开（成长页 / 建议页信息型板块）
+    function makeCollapsible(cardId) {
+      const card = document.getElementById(cardId);
+      if (!card || card.classList.contains('collapsible')) return;
+      const title = card.querySelector('.card-title');
+      if (!title) return;
+      card.classList.add('collapsible', 'collapsed');
+      const caret = document.createElement('span');
+      caret.className = 'collapse-caret';
+      caret.textContent = '▾';
+      title.appendChild(caret);
+      title.addEventListener('click', () => {
+        card.classList.toggle('collapsed');
+        if (!card.classList.contains('collapsed') && cardId === 'sec-growth') setTimeout(renderGrowthCharts, 60);
+      });
     }
 
     function init() {
@@ -2344,6 +2383,8 @@
         renderTips();
         renderTimeline();
         renderHistory();
+        // 信息型板块默认折叠
+        ['sec-reminders', 'sec-growth', 'sec-vaccine', 'sec-skills', 'sec-emotions', 'sec-exercise', 'sec-milestones'].forEach(makeCollapsible);
       } catch (e) {
         console.error('Init render failed', e);
         showError('页面初始化渲染失败：' + e.message + '。底部菜单仍可点击，请尝试刷新或清除缓存。');
