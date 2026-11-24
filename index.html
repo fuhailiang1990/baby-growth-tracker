@@ -96,6 +96,12 @@
     .hist-table th { color: var(--text-light); font-weight: 500; }
     .hist-table td:first-child, .hist-table th:first-child { text-align: left; position: sticky; left: 0; background: var(--card); z-index: 1; }
 
+    .hist-filter-label { font-size: 13px; color: var(--text-light); margin: 14px 0 8px; }
+    .hist-filter-label:first-of-type { margin-top: 0; }
+    .hist-filter-summary { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); font-size: 12px; color: var(--text-light); line-height: 1.8; }
+    .hist-filter-summary .tag { cursor: default; font-size: 12px; padding: 4px 10px; min-height: 0; }
+    .hist-export-btns { display: flex; flex-direction: column; gap: 10px; }
+
     .record-item .delete { padding: 8px; margin: -4px; }
     .milestone .check { width: 28px; height: 28px; min-width: 28px; min-height: 28px; }
     .records-list { display: flex; flex-direction: column; gap: 10px; }
@@ -322,26 +328,25 @@
 
   <!-- 历史查询 -->
   <section class="page" id="page-history">
+    <!-- ① 查询条件 -->
     <div class="card" id="sec-history-filter">
-      <h2 class="card-title">🔍 查询条件</h2>
-      <div class="segmented" id="histRange" style="margin-bottom:12px;">
+      <h2 class="card-title">📋 查询条件</h2>
+      <div class="hist-filter-label">时间范围</div>
+      <div class="segmented" id="histRange">
+        <button data-range="3">3天</button>
+        <button data-range="7">7天</button>
+        <button data-range="30">30天</button>
         <button class="active" data-range="all">全部</button>
-        <button data-range="7">近7天</button>
-        <button data-range="30">近30天</button>
-        <button data-range="90">近90天</button>
       </div>
-      <div class="form-row" style="margin-bottom:0;">
-        <label>自定义区间</label>
+      <div class="form-row" style="margin:10px 0 0;">
+        <label>自定义时间段</label>
         <div style="display:flex;gap:8px;align-items:center;">
           <input type="date" id="histStart" style="flex:1;min-width:0;">
           <span style="color:var(--text-light);font-size:13px;">至</span>
           <input type="date" id="histEnd" style="flex:1;min-width:0;">
         </div>
       </div>
-    </div>
-
-    <div class="card" id="sec-history-cats">
-      <h2 class="card-title">🏷️ 记录类型</h2>
+      <div class="hist-filter-label">记录类型</div>
       <div id="histCats" style="display:flex;flex-wrap:wrap;gap:8px;">
         <span class="tag active" data-cat="all" style="border-color:var(--primary-dark);color:var(--primary-dark);">全部</span>
         <span class="tag" data-cat="milk">🍼 吃奶</span>
@@ -354,23 +359,14 @@
         <span class="tag" data-cat="medicine">🩹 药品</span>
         <span class="tag" data-cat="foodtry">🥣 新食物</span>
       </div>
+      <div class="hist-filter-label">关键词搜索</div>
+      <input type="text" id="histKw" placeholder="搜索食物 / 药品 / 备注内容…" style="margin-bottom:0;">
+      <div class="hist-filter-summary" id="histSummary"></div>
     </div>
 
-    <div class="card" id="sec-history-kw">
-      <h2 class="card-title">🔎 关键词搜索</h2>
-      <div class="form-row" style="margin-bottom:10px;">
-        <input type="text" id="histKw" placeholder="搜索食物 / 药品 / 备注内容…">
-      </div>
-      <button class="btn" id="histExport" type="button">⬇️ 导出当前结果 CSV</button>
-    </div>
-
-    <div class="card" id="sec-history-summary">
-      <h2 class="card-title">📈 结果汇总</h2>
-      <div id="histSummary"></div>
-    </div>
-
+    <!-- ② 趋势分析（跟随筛选联动） -->
     <div class="card" id="sec-history-trend">
-      <h2 class="card-title">📉 趋势分析</h2>
+      <h2 class="card-title">📈 趋势分析</h2>
       <div class="segmented" id="histStatMode" style="margin-bottom:14px;">
         <button class="active" data-mode="day">按天</button>
         <button data-mode="week">按周（日均）</button>
@@ -379,12 +375,22 @@
       <div class="hist-table-wrap">
         <table class="hist-table" id="histTable"></table>
       </div>
-      <button class="btn" id="histExportStats" type="button" style="margin-top:12px;">⬇️ 导出统计 CSV</button>
     </div>
 
+    <!-- ③ 历史明细 -->
     <div class="card" id="sec-history-list">
-      <h2 class="card-title">📜 历史记录</h2>
+      <h2 class="card-title">📜 历史明细</h2>
       <div id="histList"></div>
+    </div>
+
+    <!-- ④ 导出 -->
+    <div class="card" id="sec-history-export">
+      <h2 class="card-title">📤 导出数据</h2>
+      <p style="font-size:13px;color:var(--text-light);margin:0 0 12px;">导出内容跟随上方查询条件（时间范围 / 记录类型 / 关键词），CSV 文件可用 Excel、WPS 直接打开。</p>
+      <div class="hist-export-btns">
+        <button class="btn" id="histExportDetail" type="button">⬇️ 导出明细 CSV（每条记录一行）</button>
+        <button class="btn" id="histExportStats" type="button" style="background:linear-gradient(135deg,#4a90d9 0%,#2b6cb0 100%);box-shadow:0 4px 12px rgba(74,144,217,0.35);">⬇️ 导出统计 CSV（按天汇总）</button>
+      </div>
     </div>
   </section>
 
@@ -1176,7 +1182,7 @@
         renderHistory();
       });
       document.getElementById('histKw').oninput = e => { histState.kw = e.target.value.trim(); histState.limit = 10; renderHistory(); };
-      document.getElementById('histExport').onclick = exportHistoryCSV;
+      document.getElementById('histExportDetail').onclick = exportHistoryCSV;
       document.getElementById('histExportStats').onclick = exportStatsCSV;
       document.querySelectorAll('#histStatMode button').forEach(btn => btn.onclick = () => {
         document.querySelectorAll('#histStatMode button').forEach(b => b.classList.remove('active'));
@@ -1554,7 +1560,18 @@
       ctx.stroke();
       data.forEach((v, i) => { ctx.beginPath(); ctx.fillStyle = color; ctx.arc(getX(i), getY(v), 4, 0, Math.PI * 2); ctx.fill(); });
       ctx.fillStyle = '#888'; ctx.font = '11px sans-serif';
-      labels.forEach((l, i) => { if (i % Math.ceil(labels.length / 5) === 0 || i === labels.length - 1) ctx.fillText(l.slice(5), getX(i) - 15, h - 8); });
+      // X 轴标签：均匀抽稀 + 保证末位显示；相邻标签像素间距不足 42 时优先保末位
+      const step = Math.max(1, Math.ceil(labels.length / 5));
+      const idxs = [];
+      for (let i = 0; i < labels.length; i += step) idxs.push(i);
+      if (idxs[idxs.length - 1] !== labels.length - 1) idxs.push(labels.length - 1);
+      const chosen = idxs.filter((i, k) => k === 0 || i === labels.length - 1 || getX(i) - getX(idxs[k - 1]) >= 42);
+      const lastIdx = labels.length - 1;
+      if (chosen.includes(lastIdx) && chosen.length >= 2) {
+        const pos = chosen.indexOf(lastIdx);
+        if (pos > 0 && getX(lastIdx) - getX(chosen[pos - 1]) < 42) chosen.splice(pos - 1, 1);
+      }
+      chosen.forEach(i => ctx.fillText(labels[i].slice(5), getX(i) - 15, h - 8));
     }
 
     const extraTagMap = {
@@ -2205,9 +2222,10 @@
         { id: 'sec-today-list', icon: '📋', label: '今日记录' }
       ]},
       { page: 'page-history', icon: '📜', label: '历史', children: [
-        { id: 'sec-history-filter', icon: '🔍', label: '查询条件' },
-        { id: 'sec-history-cats', icon: '🏷️', label: '记录类型' },
-        { id: 'sec-history-list', icon: '📜', label: '历史记录' }
+        { id: 'sec-history-filter', icon: '📋', label: '查询条件' },
+        { id: 'sec-history-trend', icon: '📈', label: '趋势分析' },
+        { id: 'sec-history-list', icon: '📜', label: '历史明细' },
+        { id: 'sec-history-export', icon: '📤', label: '导出' }
       ]},
       { page: 'page-dashboard', icon: '📊', label: '成长', children: [
         { id: 'sec-overview', icon: '📌', label: '今日概览' },
