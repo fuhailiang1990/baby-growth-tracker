@@ -85,6 +85,16 @@
     .hist-day-sub .stat { white-space: nowrap; }
     .hist-goto { font-size: 12px; color: #4a90d9; background: none; border: 1px solid #4a90d9; border-radius: 16px; padding: 5px 12px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
     .hist-more { display: block; width: 100%; margin-top: 14px; padding: 12px; border: 1.5px dashed var(--border); border-radius: 12px; background: var(--bg); color: var(--primary-dark); font-size: 14px; cursor: pointer; }
+    .hist-chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .hist-chart-card { background: var(--bg); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+    .hist-chart-title { font-size: 12px; color: var(--text-light); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hist-chart-card canvas { width: 100%; height: 130px; display: block; }
+    .hist-chart-foot { font-size: 11px; color: var(--text-light); margin-top: 6px; display: flex; justify-content: space-between; gap: 6px; }
+    .hist-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 14px; }
+    .hist-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+    .hist-table th, .hist-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--border); }
+    .hist-table th { color: var(--text-light); font-weight: 500; }
+    .hist-table td:first-child, .hist-table th:first-child { text-align: left; position: sticky; left: 0; background: var(--card); z-index: 1; }
 
     .record-item .delete { padding: 8px; margin: -4px; }
     .milestone .check { width: 28px; height: 28px; min-width: 28px; min-height: 28px; }
@@ -357,6 +367,19 @@
     <div class="card" id="sec-history-summary">
       <h2 class="card-title">📈 结果汇总</h2>
       <div id="histSummary"></div>
+    </div>
+
+    <div class="card" id="sec-history-trend">
+      <h2 class="card-title">📉 趋势分析</h2>
+      <div class="segmented" id="histStatMode" style="margin-bottom:14px;">
+        <button class="active" data-mode="day">按天</button>
+        <button data-mode="week">按周（日均）</button>
+      </div>
+      <div class="hist-chart-grid" id="histCharts"></div>
+      <div class="hist-table-wrap">
+        <table class="hist-table" id="histTable"></table>
+      </div>
+      <button class="btn" id="histExportStats" type="button" style="margin-top:12px;">⬇️ 导出统计 CSV</button>
     </div>
 
     <div class="card" id="sec-history-list">
@@ -1058,6 +1081,7 @@
         <span class="tag" style="cursor:default;">📅 ${days.size} 天</span>
         ${milkTotal ? `<span class="tag" style="cursor:default;">🍼 奶量合计 ${milkTotal}ml${milkDays ? `（日均 ${Math.round(milkTotal / milkDays)}ml）` : ''}</span>` : ''}
       </div>`;
+      renderHistoryTrend(recs);
       if (!recs.length) { listEl.innerHTML = '<div class="empty-tip">没有符合条件的历史记录~</div>'; return; }
       // 按天分组（倒序）
       const groups = {};
@@ -1153,6 +1177,117 @@
       });
       document.getElementById('histKw').oninput = e => { histState.kw = e.target.value.trim(); histState.limit = 10; renderHistory(); };
       document.getElementById('histExport').onclick = exportHistoryCSV;
+      document.getElementById('histExportStats').onclick = exportStatsCSV;
+      document.querySelectorAll('#histStatMode button').forEach(btn => btn.onclick = () => {
+        document.querySelectorAll('#histStatMode button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        histStatsState.mode = btn.dataset.mode;
+        renderHistory();
+      });
+    }
+
+    // ================= 历史趋势 / 统计 =================
+    const histStatsState = { mode: 'day' };
+
+    function histMetricDefs() {
+      return [
+        { key: 'milk', label: '奶量', unit: 'ml', icon: '🍼', color: '#F06292', cats: ['milk'], val: r => Number(r.amount || 0) },
+        { key: 'water', label: '喝水', unit: 'ml', icon: '💧', color: '#4a90d9', cats: ['water'], val: r => Number(r.amount || 0) },
+        { key: 'food', label: '辅食', unit: '次', icon: '🥄', color: '#ff9800', cats: ['food'], val: () => 1 },
+        { key: 'sleep', label: '睡眠', unit: '分钟', icon: '💤', color: '#7e57c2', cats: ['sleep'], val: r => sleepMinutes(r.start, r.end) },
+        { key: 'pee', label: '小便', unit: '次', icon: '💦', color: '#4DB6AC', cats: ['pee'], val: () => 1 },
+        { key: 'poop', label: '大便', unit: '次', icon: '💩', color: '#8d6e63', cats: ['poop'], val: () => 1 },
+      ];
+    }
+
+    // 本地时区格式化，避免 toISOString 的 UTC 偏移导致日期错位
+    function fmtLocalDate(d) {
+      const p = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    }
+
+    // 按天聚合（升序）；返回 [{ sortKey:'YYYY-MM-DD', label:'MM/DD', milk, water, food, sleep, pee, poop }]
+    function histDayRows(recs) {
+      const days = {};
+      recs.forEach(r => { (days[r.date] = days[r.date] || []).push(r); });
+      const metrics = histMetricDefs();
+      return Object.keys(days).sort().map(date => {
+        const row = { sortKey: date, label: date.slice(5).replace('-', '/') };
+        metrics.forEach(m => { row[m.key] = days[date].filter(r => m.cats.includes(r.category)).reduce((s, r) => s + m.val(r), 0); });
+        return row;
+      });
+    }
+
+    // 按周聚合（周一至周日），数值=周内日均（保留1位小数）
+    function histWeekStart(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      return d;
+    }
+
+    function histWeekRows(dayRows) {
+      const metrics = histMetricDefs();
+      const weeks = {};
+      dayRows.forEach(row => {
+        const key = fmtLocalDate(histWeekStart(row.sortKey));
+        (weeks[key] = weeks[key] || []).push(row);
+      });
+      return Object.keys(weeks).sort().map(key => {
+        const rows = weeks[key];
+        const out = { sortKey: key, label: key.slice(5).replace('-', '/') + '周', _days: rows.length };
+        metrics.forEach(m => { out[m.key] = Math.round(rows.reduce((s, r) => s + r[m.key], 0) / rows.length * 10) / 10; });
+        return out;
+      });
+    }
+
+    function renderHistoryTrend(recs) {
+      const chartsEl = document.getElementById('histCharts');
+      const tableEl = document.getElementById('histTable');
+      if (!chartsEl || !tableEl) return;
+      const metrics = histMetricDefs();
+      const dayRows = histDayRows(recs);
+      const isWeek = histStatsState.mode === 'week';
+      const rows = isWeek ? histWeekRows(dayRows) : dayRows;
+      // 只展示筛选结果里有数据的指标
+      const active = metrics.filter(m => rows.some(r => r[m.key] > 0));
+      if (!active.length) {
+        chartsEl.innerHTML = '<div class="empty-tip" style="grid-column:1/-1;">当前筛选条件下没有可统计的数据~</div>';
+        tableEl.innerHTML = '';
+        return;
+      }
+      chartsEl.innerHTML = active.map(m => {
+        const vals = rows.map(r => r[m.key]);
+        const avg = Math.round(vals.reduce((s, v) => s + v, 0) / vals.length * 10) / 10;
+        return `<div class="hist-chart-card">
+          <div class="hist-chart-title">${m.icon} ${m.label}${isWeek ? '（日均）' : ''} ${m.unit}</div>
+          <canvas id="histChart_${m.key}"></canvas>
+          <div class="hist-chart-foot"><span>平均 ${avg}</span><span>最新 ${vals[vals.length - 1]}</span></div>
+        </div>`;
+      }).join('');
+      active.forEach(m => drawLineChart('histChart_' + m.key, rows.map(r => r.sortKey), rows.map(r => r[m.key]), m.label, m.color));
+      // 统计表（倒序：最新在前）
+      const fmtCell = (m, v) => {
+        if (!v) return '<span style="color:#d8c3cc;">–</span>';
+        return m.key === 'sleep' ? fmtMin(Math.round(v)) : String(v);
+      };
+      tableEl.innerHTML = `<tr><th>${isWeek ? '周起始' : '日期'}</th>${active.map(m => `<th>${m.icon}${m.label}</th>`).join('')}</tr>`
+        + rows.slice().reverse().map(r => `<tr><td>${r.label}${isWeek ? `<span style="color:var(--text-light);font-size:11px;"> ${r._days}天</span>` : ''}</td>${active.map(m => `<td>${fmtCell(m, r[m.key])}</td>`).join('')}</tr>`).join('');
+    }
+
+    function exportStatsCSV() {
+      const dayRows = histDayRows(histFiltered());
+      const metrics = histMetricDefs().filter(m => dayRows.some(r => r[m.key] > 0));
+      if (!dayRows.length || !metrics.length) { showToast('没有可导出的统计数据'); return; }
+      const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const lines = [['日期', ...metrics.map(m => `${m.label}(${m.unit})`)].map(esc).join(',')];
+      dayRows.forEach(r => lines.push([r.sortKey, ...metrics.map(m => Math.round(r[m.key] * 10) / 10)].map(esc).join(',')));
+      const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `宝宝成长统计_${todayStr()}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast(`已导出 ${dayRows.length} 天统计`);
     }
 
     function exportHistoryCSV() {
@@ -1419,7 +1554,7 @@
       ctx.stroke();
       data.forEach((v, i) => { ctx.beginPath(); ctx.fillStyle = color; ctx.arc(getX(i), getY(v), 4, 0, Math.PI * 2); ctx.fill(); });
       ctx.fillStyle = '#888'; ctx.font = '11px sans-serif';
-      labels.forEach((l, i) => { if (i % Math.ceil(labels.length / 5) === 0) ctx.fillText(l.slice(5), getX(i) - 15, h - 8); });
+      labels.forEach((l, i) => { if (i % Math.ceil(labels.length / 5) === 0 || i === labels.length - 1) ctx.fillText(l.slice(5), getX(i) - 15, h - 8); });
     }
 
     const extraTagMap = {
