@@ -485,8 +485,8 @@
       <div id="summaryBody"></div>
       <div class="ai-config-row" id="aiConfigRow">
         <div class="form-row" style="margin-bottom:8px;">
-          <label>接口地址（OpenAI 兼容，留空默认 Kimi）</label>
-          <input type="text" id="aiEndpoint" placeholder="https://api.moonshot.cn/v1">
+          <label>接口地址（OpenAI 兼容，留空默认智谱 GLM）</label>
+          <input type="text" id="aiEndpoint" placeholder="https://open.bigmodel.cn/api/paas/v4">
         </div>
         <div class="form-row" style="margin-bottom:8px;">
           <label>API Key（只存本机，不会上传）</label>
@@ -494,9 +494,9 @@
         </div>
         <div class="form-row" style="margin-bottom:8px;">
           <label>模型</label>
-          <input type="text" id="aiModel" placeholder="moonshot-v1-8k">
+          <input type="text" id="aiModel" placeholder="glm-4-flash">
         </div>
-        <p style="font-size:12px;color:var(--text-light);margin:0 0 8px;line-height:1.5;">Kimi Key 获取：platform.moonshot.cn → 「API Key 管理」→ 新建。注意是开发者平台，不是 kimi.com 普通账号。DeepSeek 等平台同理，需把接口地址改为对应地址。</p>
+        <p style="font-size:12px;color:var(--text-light);margin:0 0 8px;line-height:1.5;">默认已接入智谱 GLM（glm-4-flash，免费），保存过其他配置会覆盖默认值。智谱 Key 获取：open.bigmodel.cn → 控制台 → API keys。想换 glm-4-plus 等模型直接改「模型」栏；用 Kimi / DeepSeek 等其他平台则改接口地址。</p>
         <div style="display:flex;gap:8px;">
           <button class="btn" id="aiTestBtn" type="button" style="flex:1;padding:10px;font-size:14px;background:#fff;color:#4a90d9;box-shadow:none;border:1.5px solid #4a90d9;">🔌 测试连接</button>
           <button class="btn" id="aiSaveConfig" type="button" style="flex:1;padding:10px;font-size:14px;">保存配置</button>
@@ -1711,8 +1711,14 @@
 
     // -------- AI 深度建议（OpenAI 兼容接口，Key 仅存本机） --------
     const aiConfigKey = 'babyAIConfig';
+    // 内置默认 AI：智谱 GLM（glm-4-flash 免费额度）。localStorage 保存的配置优先于默认值。
+    const DEFAULT_AI_CONFIG = { endpoint: 'https://open.bigmodel.cn/api/paas/v4', apiKey: '6a05cbd5a9874886a81791a631979b0c.o59e8to622b0kBu4', model: 'glm-4-flash' };
     function getAIConfig() {
-      try { return JSON.parse(localStorage.getItem(aiConfigKey)) || {}; } catch { return {}; }
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem(aiConfigKey)) || {}; } catch { saved = {}; }
+      const cfg = { ...DEFAULT_AI_CONFIG };
+      ['endpoint', 'apiKey', 'model'].forEach(k => { if (saved[k]) cfg[k] = saved[k]; });
+      return cfg;
     }
     function summaryPromptText() {
       const days = summaryState.days;
@@ -1738,8 +1744,8 @@
         return;
       }
       box.innerHTML = '<div class="ai-loading">✨ AI 正在分析宝宝数据…</div>';
-      const endpoint = (cfg.endpoint || 'https://api.moonshot.cn/v1').replace(/\/+$/, '');
-      const model = cfg.model || 'moonshot-v1-8k';
+      const endpoint = (cfg.endpoint || DEFAULT_AI_CONFIG.endpoint).replace(/\/+$/, '');
+      const model = cfg.model || DEFAULT_AI_CONFIG.model;
       const prompt = `你是资深儿科育儿顾问。请根据以下宝宝近期数据，输出三部分（用简短分点，语气温暖）：\n1) 情况综述：吃饭/喝水/排泄/睡眠的整体评价\n2) 科学调整建议：具体可执行的喂养与护理建议\n3) 需要警惕的信号：什么情况该就医\n\n${summaryPromptText()}\n\n注意：建议要符合中国育儿常识，不要推荐药品，最后加一句「以上建议仅供参考，不能替代医生诊断」。`;
       try {
         const resp = await fetch(`${endpoint}/chat/completions`, {
@@ -1778,7 +1784,7 @@
         localStorage.setItem(aiConfigKey, JSON.stringify({
           endpoint: document.getElementById('aiEndpoint').value.trim(),
           apiKey: document.getElementById('aiApiKey').value.trim(),
-          model: document.getElementById('aiModel').value.trim() || 'moonshot-v1-8k'
+          model: document.getElementById('aiModel').value.trim() || DEFAULT_AI_CONFIG.model
         }));
         document.getElementById('aiConfigRow').classList.remove('open');
         showToast('AI 配置已保存');
@@ -1788,7 +1794,7 @@
         document.getElementById('aiEndpoint').value = '';
         document.getElementById('aiApiKey').value = '';
         document.getElementById('aiModel').value = '';
-        showToast('已清除');
+        showToast('已清除，将使用内置默认智谱 GLM');
       };
     }
 
@@ -1796,7 +1802,7 @@
     async function testAIConnection() {
       const resultEl = document.getElementById('aiTestResult');
       const apiKey = document.getElementById('aiApiKey').value.trim();
-      const endpoint = (document.getElementById('aiEndpoint').value.trim() || 'https://api.moonshot.cn/v1').replace(/\/+$/, '');
+      const endpoint = (document.getElementById('aiEndpoint').value.trim() || DEFAULT_AI_CONFIG.endpoint).replace(/\/+$/, '');
       if (!apiKey) { resultEl.innerHTML = '<span style="color:#ff6b6b;">请先填写 API Key</span>'; return; }
       resultEl.innerHTML = '<span style="color:var(--text-light);">正在测试…</span>';
       try {
@@ -1808,7 +1814,7 @@
         } else if (resp.status === 401) {
           resultEl.innerHTML = `<span style="color:#ff6b6b;">✗ 401 Key 无效：请确认是该平台（${endpoint}）创建的 Key，且没有多余空格</span>`;
         } else if (resp.status === 404) {
-          resultEl.innerHTML = `<span style="color:#ff6b6b;">✗ 404 接口地址不对：应为 .../v1 结尾，如 https://api.moonshot.cn/v1</span>`;
+          resultEl.innerHTML = `<span style="color:#ff6b6b;">✗ 404 接口地址不对：智谱应为 https://open.bigmodel.cn/api/paas/v4，Kimi 为 https://api.moonshot.cn/v1</span>`;
         } else {
           resultEl.innerHTML = `<span style="color:#ff6b6b;">✗ 失败：HTTP ${resp.status}</span>`;
         }
@@ -2638,7 +2644,7 @@
         (function applyAIHash() {
           const m = location.hash.match(/^#ai=([^,]+)(?:,([^,]*))?(?:,([^,]*))?/);
           if (!m) return;
-          const cfg = { apiKey: decodeURIComponent(m[1]), endpoint: m[2] ? decodeURIComponent(m[2]) : '', model: m[3] ? decodeURIComponent(m[3]) : 'moonshot-v1-8k' };
+          const cfg = { apiKey: decodeURIComponent(m[1]), endpoint: m[2] ? decodeURIComponent(m[2]) : '', model: m[3] ? decodeURIComponent(m[3]) : DEFAULT_AI_CONFIG.model };
           localStorage.setItem(aiConfigKey, JSON.stringify(cfg));
           history.replaceState(null, '', location.pathname + location.search);
           showToast('AI 配置成功 ✓');
